@@ -1,6 +1,7 @@
 package openfl.display3D;
 
 #if !flash
+import openfl.display3D.utils.UInt8Buff;
 import openfl.display3D._internal.Context3DState;
 import openfl.display3D._internal.GLBuffer;
 import openfl.display3D._internal.GLFramebuffer;
@@ -281,7 +282,6 @@ import lime.math.Vector2;
 	@:noCompletion private var __stage3D:Stage3D;
 	@:noCompletion private var __state:Context3DState;
 	@:noCompletion private var __vertexConstants:Float32Array;
-	@:noCompletion private var __rawMatrixData:Float32Array;
 
 	@:noCompletion private function new(stage:Stage, contextState:Context3DState = null, stage3D:Stage3D = null)
 	{
@@ -424,7 +424,6 @@ import lime.math.Vector2;
 		__quadIndexBuffer = createIndexBuffer(__quadIndexBufferCount);
 		__quadIndexBuffer.uploadFromTypedArray(data);
 		#end
-		__rawMatrixData = new Float32Array(16);
 	}
 
 	/**
@@ -461,12 +460,6 @@ import lime.math.Vector2;
 	**/
 	public function clear(red:Float = 0, green:Float = 0, blue:Float = 0, alpha:Float = 1, depth:Float = 1, stencil:UInt = 0,
 			mask:UInt = Context3DClearMask.ALL):Void
-	{
-		__clear(false, red, green, blue, alpha, depth, stencil, mask);
-	}
-
-	@:noCompletion private function __clear(useScissor:Bool, red:Float = 0, green:Float = 0, blue:Float = 0, alpha:Float = 1, depth:Float = 1,
-			stencil:UInt = 0, mask:UInt = Context3DClearMask.ALL)
 	{
 		__flushGLFramebuffer();
 		__flushGLViewport();
@@ -527,15 +520,7 @@ import lime.math.Vector2;
 
 		if (clearMask == 0) return;
 
-		if (useScissor)
-		{
-			__flushGLScissor();
-		}
-		else
-		{
-			__setGLScissorTest(false);
-		}
-
+		__setGLScissorTest(false);
 		gl.clear(clearMask);
 	}
 
@@ -636,26 +621,7 @@ import lime.math.Vector2;
 				var scaledHeight = wantsBestResolution ? height : Std.int(height * __stage.window.scale);
 				#end
 				var vertexData = new Vector<Float>([
-					scaledWidth,
-					scaledHeight,
-					0,
-					1,
-					1,
-					0,
-					scaledHeight,
-					0,
-					0,
-					1,
-					scaledWidth,
-					0,
-					0,
-					1,
-					0,
-					0,
-					0,
-					0,
-					0,
-					0.0
+					scaledWidth, scaledHeight, 0, 1, 1, 0, scaledHeight, 0, 0, 1, scaledWidth, 0, 0, 1, 0, 0, 0, 0, 0, 0.0
 				]);
 
 				__stage3D.__vertexBuffer.uploadFromVector(vertexData, 0, 20);
@@ -1129,10 +1095,9 @@ import lime.math.Vector2;
 
 			__flushGLFramebuffer();
 			__flushGLViewport();
-
-			// TODO: Read less pixels if srcRect is smaller
-
-			var data = new UInt8Array(backBufferWidth * backBufferHeight * 4);
+			//! EDITED BY NE_EO TO REDUCE GARBAGE MEMORY
+			var buffer = UInt8Buff.get(backBufferWidth * backBufferHeight * 4); // new UInt8Array(backBufferWidth * backBufferHeight * 4);
+			var data = buffer.buffer;
 			gl.readPixels(0, 0, backBufferWidth, backBufferHeight, __backBufferTexture.__format, gl.UNSIGNED_BYTE, data);
 
 			var image = new Image(new ImageBuffer(data, backBufferWidth, backBufferHeight, 32, BGRA32));
@@ -1143,6 +1108,8 @@ import lime.math.Vector2;
 				setRenderToTexture(cacheRenderToTexture, __state.renderToTextureDepthStencil, __state.renderToTextureAntiAlias,
 					__state.renderToTextureSurfaceSelector);
 			}
+
+			buffer.put();
 		}
 		#end
 	}
@@ -1524,12 +1491,14 @@ import lime.math.Vector2;
 		{
 			__flushGLProgram();
 
+			// TODO: Cache value, prevent need to copy
+			var data = new Float32Array(16);
 			for (i in 0...16)
 			{
-				__rawMatrixData[i] = matrix.rawData[i];
+				data[i] = matrix.rawData[i];
 			}
 
-			gl.uniformMatrix4fv(cast firstRegister, transposedMatrix, __rawMatrixData);
+			gl.uniformMatrix4fv(cast firstRegister, transposedMatrix, data);
 		}
 		else
 		{
@@ -1888,13 +1857,13 @@ import lime.math.Vector2;
 		As an example, a programmer might define each vertex with the following data:
 
 		```
-		position:  x    float32
-				   y    float32
-				   z    float32
-		color:     r    unsigned byte
-				   g    unsigned byte
-				   b    unsigned byte
-				   a    unsigned byte
+		position:  x	float32
+				   y	float32
+				   z	float32
+		color:	 r	unsigned byte
+				   g	unsigned byte
+				   b	unsigned byte
+				   a	unsigned byte
 		```
 
 		Assuming the vertex was defined in a VertexBuffer3D object named buffer, it
@@ -1902,7 +1871,7 @@ import lime.math.Vector2;
 
 		```haxe
 		setVertexBufferAt(0, buffer, 0, Context3DVertexBufferFormat.FLOAT_3);   // attribute #0 will contain the position information
-		setVertexBufferAt(1, buffer, 3, Context3DVertexBufferFormat.BYTES_4);    // attribute #1 will contain the color information
+		setVertexBufferAt(1, buffer, 3, Context3DVertexBufferFormat.BYTES_4);	// attribute #1 will contain the color information
 		```
 
 		@param	index	the index of the attribute register in the vertex shader (0
@@ -2362,8 +2331,7 @@ import lime.math.Vector2;
 	@:noCompletion private function __flushGLTextures():Void
 	{
 		var sampler = 0;
-		var texture:TextureBase;
-		var samplerState:SamplerState;
+		var texture, samplerState;
 
 		for (i in 0...__state.textures.length)
 		{

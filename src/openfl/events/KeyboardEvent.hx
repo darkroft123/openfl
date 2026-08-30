@@ -1,6 +1,5 @@
 package openfl.events;
 
-#if !flash
 // import openfl.utils.ObjectPool;
 import openfl.ui.KeyLocation;
 
@@ -19,10 +18,6 @@ import openfl.ui.KeyLocation;
 	@see [Capturing keyboard input](https://books.openfl.org/openfl-developers-guide/keyboard-input/capturing-keyboard-input.html)
 	@see `openfl.ui.Keyboard`
 **/
-#if !openfl_debug
-@:fileXml('tags="haxe,release"')
-@:noDebug
-#end
 class KeyboardEvent extends Event
 {
 	/**
@@ -44,7 +39,7 @@ class KeyboardEvent extends Event
 		| `shiftKey` | `true` if the Shift key is active; `false` if it is inactive. |
 		| `target` | The InteractiveObject instance with focus. The `target` is not always the object in the display list that registered the event listener. Use the `currentTarget` property to access the object in the display list that is currently processing the event. |
 	**/
-	public static var KEY_DOWN(default, never):EventType<KeyboardEvent> = "keyDown";
+	public static inline var KEY_DOWN:EventType<KeyboardEvent> = "keyDown";
 
 	/**
 		The `KeyboardEvent.KEY_UP` constant defines the value of the `type`
@@ -65,7 +60,7 @@ class KeyboardEvent extends Event
 		| `shiftKey` | `true` if the Shift key is active; `false` if it is inactive. |
 		| `target` | The InteractiveObject instance with focus. The `target` is not always the object in the display list that registered the event listener. Use the `currentTarget` property to access the object in the display list that is currently processing the event. |
 	**/
-	public static var KEY_UP(default, never):EventType<KeyboardEvent> = "keyUp";
+	public static inline var KEY_UP:EventType<KeyboardEvent> = "keyUp";
 
 	/**
 		Indicates whether the Alt key is active (`true`) or inactive
@@ -242,6 +237,3 @@ class KeyboardEvent extends Event
 		__updateAfterEventFlag = false;
 	}
 }
-#else
-typedef KeyboardEvent = flash.events.KeyboardEvent;
-#end
