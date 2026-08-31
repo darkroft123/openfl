@@ -121,22 +121,6 @@ import lime.ui.Gamepad;
 	**/
 	public function stopCachingSamples():Void {}
 
-	public function rumble(lowFrequency:Float, highFrequency:Float, duration:Int):Void
-	{
-		if (__gamepad != null)
-		{
-			__gamepad.rumble(lowFrequency, highFrequency, duration);
-		}
-	}
-
-	public function setLED(red:Int, green:Int, blue:Int):Void
-	{
-		if (__gamepad != null)
-		{
-			__gamepad.setLED(red, green, blue);
-		}
-	}
-
 	// Get & Set Methods
 	@:noCompletion private function get_numControls():Int
 	{
