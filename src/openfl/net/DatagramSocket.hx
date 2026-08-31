@@ -80,12 +80,12 @@ class DatagramSocket extends EventDispatcher
 	/**
 		The IP address this socket is bound to on the local machine.
 	**/
-	public var localAddress(default, null):String;
+	public var localAddress(get, null):String;
 
 	/**
 		The port this socket is bound to on the local machine.
 	**/
-	public var localPort(default, null):Int;
+	public var localPort(get, null):Int;
 
 	/**
 		The IP address of the remote machine to which this socket is connected.
@@ -101,7 +101,6 @@ class DatagramSocket extends EventDispatcher
 	@:noCompletion private var __isReceiving:Bool;
 	@:noCompletion private var __iBytes:Bytes = Bytes.alloc(4096);
 	@:noCompletion private var __buffer:ByteArray;
-	@:noCompletion private var __localAddress:String;
 
 	/**
 		Creates a DatagramSocket object
@@ -145,19 +144,13 @@ class DatagramSocket extends EventDispatcher
 	**/
 	public function bind(localPort:Int = 0, localAddress:String = "0.0.0.0"):Void
 	{
-		if (localPort < 0 || localPort > 65535)
+		if (localPort > 65535 || localPort < 0)
 		{
 			throw new RangeError("Invalid socket port number specified.");
 		}
 		try
 		{
 			__udpSocket.bind(new Host(localAddress), localPort);
-
-			var host = __udpSocket.host();
-			//TODO: Reduce GC pressure here? Do we need to do this for other Socket API?
-			this.localAddress = localAddress == "0.0.0.0" ? representativeHost() : localAddress;
-			this.localPort = host.port;
-
 			bound = true;
 		}
 		catch (e:Dynamic)
@@ -168,8 +161,6 @@ class DatagramSocket extends EventDispatcher
 					dispatchEvent(new Event(Event.CLOSE));
 				case "Unresolved host":
 					throw new ArgumentError("One of the parameters is invalid");
-				default:
-					throw e;
 			}
 		}
 	}
@@ -286,31 +277,32 @@ class DatagramSocket extends EventDispatcher
 	**/
 	public function send(bytes:ByteArray, offset:UInt = 0, length:UInt = 0, address:String = null, port:Int = 0):Void
 	{
-		if (port < 0 || port > 65535)
+		if (localPort > 65535 || localPort < 0)
 		{
 			throw new RangeError("Invalid socket port number specified.");
-		}
-
-		if (length == 0)
-		{
-			length = bytes.length - offset;
 		}
 
 		if (offset + length > bytes.length)
 		{
 			throw new RangeError("The supplied index is out of bounds.");
 		}
-
 		try
 		{
+			if (length == 0)
+			{
+				length = bytes.length;
+			}
 			if (address == null)
 			{
-				if (!connected)
+				if (connected)
 				{
-					throw new ArgumentError("Connected socket required when address is null");
+					__udpSocket.output.writeBytes(cast bytes, offset, length);
+					__udpSocket.output.flush();
 				}
-				__udpSocket.output.writeBytes(cast bytes, offset, length);
-				__udpSocket.output.flush();
+				else
+				{
+					throw new ArgumentError("One of the parameters is invalid");
+				}
 			}
 			else
 			{
@@ -333,14 +325,10 @@ class DatagramSocket extends EventDispatcher
 	override public function addEventListener<T>(type:EventType<T>, listener:Dynamic->Void, useCapture:Bool = false, priority:Int = 0,
 			useWeakReference:Bool = false):Void
 	{
-		var dataEvent = DatagramSocketDataEvent.DATA;
-
-		// Will we have *no* DATA listeners until this call succeeds?
-		var needsEnterFrame = (type == dataEvent && !this.hasEventListener(dataEvent));
-
+		var dataEvent:String = DatagramSocketDataEvent.DATA;
 		super.addEventListener(type, listener, useCapture, priority, useWeakReference);
 
-		if (needsEnterFrame)
+		if (type == dataEvent && !this.hasEventListener(dataEvent))
 		{
 			Lib.current.addEventListener(Event.ENTER_FRAME, __onFrameUpdate);
 		}
@@ -349,29 +337,10 @@ class DatagramSocket extends EventDispatcher
 	override public function removeEventListener<T>(type:EventType<T>, listener:Dynamic->Void, useCapture:Bool = false):Void
 	{
 		super.removeEventListener(type, listener, useCapture);
-
-		var dataEvent = DatagramSocketDataEvent.DATA;
-
-		// Did we just remove the *last* DATA listener?
-		if (type == dataEvent && !this.hasEventListener(dataEvent))
+		if (type == DatagramSocketDataEvent.DATA)
 		{
 			Lib.current.removeEventListener(Event.ENTER_FRAME, __onFrameUpdate);
 		}
-	}
-
-	inline function representativeHost():String
-	{
-		var sock = new sys.net.Socket();
-		var result = "127.0.0.1";
-		try
-		{
-			sock.connect(new sys.net.Host("8.8.8.8"), 53);
-			var h = sock.host();
-			if (h != null) result = h.host.toString();
-		}
-		catch (e:Dynamic) {}
-		sock.close();
-		return result;
 	}
 
 	@:noCompletion private function __onFrameUpdate(e:Event):Void
@@ -415,6 +384,37 @@ class DatagramSocket extends EventDispatcher
 		#else
 		return (__udpSocket.peer() != null);
 		#end
+	}
+
+	@:noCompletion private function get_localAddress():String
+	{
+		#if neko
+		try
+		{
+			return __udpSocket.host().host.host;
+		}
+		catch (e:Dynamic)
+		{
+			return null;
+		}
+		#else
+		var host = __udpSocket.host();
+
+		if (host == null)
+		{
+			return null;
+		}
+		return host.host.host;
+		#end
+	}
+
+	@:noCompletion private function get_localPort():Int
+	{
+		if (bound)
+		{
+			return __udpSocket.host().port;
+		}
+		return 0;
 	}
 
 	@:noCompletion private function get_remoteAddress():String

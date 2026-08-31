@@ -86,14 +86,6 @@ class Matrix3D
 	**/
 	public var rawData:Vector<Float>;
 
-	@:isVar private static var __emptyMatrix(get, never):Matrix3D = new Matrix3D();
-
-	private static function get___emptyMatrix():Matrix3D
-	{
-	    __emptyMatrix.identity();
-		return __emptyMatrix;
-	}
-
 	#if openfljs
 	@:noCompletion private static function __init__()
 	{
@@ -105,7 +97,7 @@ class Matrix3D
 			"position": {
 				get: untyped #if haxe4 js.Syntax.code #else __js__ #end ("function () { return this.get_position (); }"),
 				set: untyped #if haxe4 js.Syntax.code #else __js__ #end ("function (v) { return this.set_position (v); }")
-			}
+			},
 		});
 	}
 	#end
@@ -268,7 +260,7 @@ class Matrix3D
 			z2 /= ls;
 		}
 		var ccos = 1 - cos;
-		var m = __emptyMatrix;
+		var m = new Matrix3D();
 		var d = m.rawData;
 		d[0] = x2 + (y2 + z2) * cos;
 		d[1] = x * y * ccos + z * sin;
@@ -314,24 +306,9 @@ class Matrix3D
 	**/
 	public function appendScale(xScale:Float, yScale:Float, zScale:Float):Void
 	{
-    	var m = __emptyMatrix;
-        m.rawData[0] = xScale;
-        m.rawData[1] = 0.0;
-        m.rawData[2] = 0.0;
-        m.rawData[3] = 0.0;
-        m.rawData[4] = 0.0;
-        m.rawData[5] = yScale;
-        m.rawData[6] = 0.0;
-        m.rawData[7] = 0.0;
-        m.rawData[8] = 0.0;
-        m.rawData[9] = 0.0;
-        m.rawData[10] = zScale;
-        m.rawData[11] = 0.0;
-        m.rawData[12] = 0.0;
-        m.rawData[13] = 0.0;
-        m.rawData[14] = 0.0;
-        m.rawData[15] = 1.0;
-		this.append(m);
+		this.append(new Matrix3D(new Vector<Float>([
+			xScale, 0.0, 0.0, 0.0, 0.0, yScale, 0.0, 0.0, 0.0, 0.0, zScale, 0.0, 0.0, 0.0, 0.0, 1.0
+		])));
 	}
 
 	/**
@@ -626,22 +603,7 @@ class Matrix3D
 		var sz = 1.0 / (zFar - zNear);
 
 		return new Matrix3D(new Vector<Float>([
-			2.0 * sx,
-			0,
-			0,
-			0,
-			0,
-			2.0 * sy,
-			0,
-			0,
-			0,
-			0,
-			-2.0 * sz,
-			0,
-			-(x0 + x1) * sx,
-			-(y0 + y1) * sy,
-			-(zNear + zFar) * sz,
-			1
+			2.0 * sx, 0, 0, 0, 0, 2.0 * sy, 0, 0, 0, 0, -2.0 * sz, 0, -(x0 + x1) * sx, -(y0 + y1) * sy, -(zNear + zFar) * sz, 1
 		]));
 	}
 
@@ -1052,22 +1014,7 @@ class Matrix3D
 	**/
 	public function identity():Void
 	{
-		rawData[0] = 1.0;
-		rawData[1] = 0.0;
-		rawData[2] = 0.0;
-		rawData[3] = 0.0;
-		rawData[4] = 0.0;
-		rawData[5] = 1.0;
-		rawData[6] = 0.0;
-		rawData[7] = 0.0;
-		rawData[8] = 0.0;
-		rawData[9] = 0.0;
-		rawData[10] = 1.0;
-		rawData[11] = 0.0;
-		rawData[12] = 0.0;
-		rawData[13] = 0.0;
-		rawData[14] = 0.0;
-		rawData[15] = 1.0;
+		rawData = new Vector<Float>([1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0]);
 	}
 
 	/**
@@ -1434,11 +1381,11 @@ class Matrix3D
 		{
 			if (dir.x != 0)
 			{
-				vup.setTo(-dir.y, dir.x, 0);
+				vup = new Vector3D(-dir.y, dir.x, 0);
 			}
 			else
 			{
-				vup.setTo(1, 0, 0);
+				vup = new Vector3D(1, 0, 0);
 			}
 		}
 
@@ -1619,7 +1566,7 @@ class Matrix3D
 			z2 /= ls;
 		}
 		var ccos = 1 - cos;
-		var m = __emptyMatrix;
+		var m = new Matrix3D();
 		var d = m.rawData;
 		d[0] = x2 + (y2 + z2) * cos;
 		d[1] = x * y * ccos + z * sin;
@@ -1667,24 +1614,9 @@ class Matrix3D
 	**/
 	public function prependScale(xScale:Float, yScale:Float, zScale:Float):Void
 	{
-	    var m = __emptyMatrix;
-		m.rawData[0] = xScale;
-		m.rawData[1] = 0.0;
-		m.rawData[2] = 0.0;
-		m.rawData[3] = 0.0;
-		m.rawData[4] = 0.0;
-		m.rawData[5] = yScale;
-		m.rawData[6] = 0.0;
-		m.rawData[7] = 0.0;
-		m.rawData[8] = 0.0;
-		m.rawData[9] = 0.0;
-		m.rawData[10] = zScale;
-		m.rawData[11] = 0.0;
-		m.rawData[12] = 0.0;
-		m.rawData[13] = 0.0;
-		m.rawData[14] = 0.0;
-		m.rawData[15] = 1.0;
-		this.prepend(m);
+		this.prepend(new Matrix3D(new Vector<Float>([
+			xScale, 0.0, 0.0, 0.0, 0.0, yScale, 0.0, 0.0, 0.0, 0.0, zScale, 0.0, 0.0, 0.0, 0.0, 1.0
+		])));
 	}
 
 	/**
@@ -1718,10 +1650,8 @@ class Matrix3D
 	**/
 	public function prependTranslation(x:Float, y:Float, z:Float):Void
 	{
-		var m = __emptyMatrix;
-		m.rawData[12] = x;
-		m.rawData[13] = y;
-		m.rawData[14] = z;
+		var m = new Matrix3D();
+		m.position = new Vector3D(x, y, z);
 		this.prepend(m);
 	}
 

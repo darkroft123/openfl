@@ -179,7 +179,8 @@ class EventDispatcher implements IEventDispatcher
 								it is not garbage-collected and stays
 								persistent.
 
-								Weak reference support is limited to html5 and
+								Weak references are supported on some OpenFL
+								targets only, including html5, cpp, and
 								flash/air. On other targets, this parameter is
 								ignored, and the reference will be strong instead.
 		@throws ArgumentError The `listener` specified is not a

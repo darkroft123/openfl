@@ -8,6 +8,7 @@ package openfl.display;
 	`direction` property of a FocusEvent object.
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract FocusDirection(Null<Int>)
+
 {
 	/**
 		Indicates that focus should be given to the object at the end of the
@@ -50,7 +51,9 @@ package openfl.display;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract FocusDirection(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract FocusDirection(String) from String to String
+
 {
 	public var BOTTOM = "bottom";
 	public var NONE = "none";

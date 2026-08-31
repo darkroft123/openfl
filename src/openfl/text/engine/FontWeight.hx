@@ -10,6 +10,7 @@ package openfl.text.engine;
 	@see `openfl.text.StageText.fontWeight`
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract FontWeight(Null<Int>)
+
 {
 	/**
 		Used to indicate bold font weight.
@@ -42,7 +43,9 @@ package openfl.text.engine;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract FontWeight(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract FontWeight(String) from String to String
+
 {
 	public var BOLD = "bold";
 	public var NORMAL = "normal";

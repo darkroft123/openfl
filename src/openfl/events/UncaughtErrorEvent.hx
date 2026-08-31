@@ -91,7 +91,7 @@ class UncaughtErrorEvent extends ErrorEvent
 		| `target` | The LoaderInfo object associated with the SWF where the error happened. |
 		| `text` | Text error message. |
 	**/
-	public static var UNCAUGHT_ERROR(default, never):EventType<UncaughtErrorEvent> = "uncaughtError";
+	public static inline var UNCAUGHT_ERROR:EventType<UncaughtErrorEvent> = "uncaughtError";
 
 	/**
 		The error object associated with the uncaught error. Typically, this
@@ -198,8 +198,6 @@ class UncaughtErrorEvent extends ErrorEvent
 	@:noCompletion private override function __init():Void
 	{
 		super.__init();
-		bubbles = true;
-		cancelable = true;
 		error = null;
 	}
 }

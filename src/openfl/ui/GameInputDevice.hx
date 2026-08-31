@@ -121,9 +121,6 @@ import lime.ui.Gamepad;
 	**/
 	public function stopCachingSamples():Void {}
 
-	/**
-		Start a rumble effect.
-	**/
 	public function rumble(lowFrequency:Float, highFrequency:Float, duration:Int):Void
 	{
 		if (__gamepad != null)
@@ -132,9 +129,6 @@ import lime.ui.Gamepad;
 		}
 	}
 
-	/**
-		Update the LED color.
-	**/
 	public function setLED(red:Int, green:Int, blue:Int):Void
 	{
 		if (__gamepad != null)

@@ -12,6 +12,7 @@ package openfl.globalization;
 **/
 #if !openfljs
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract DateTimeNameStyle(Null<Int>)
+
 {
 	/**
 		Specifies the full form or full name style for month names and weekday
@@ -64,7 +65,9 @@ package openfl.globalization;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract DateTimeNameStyle(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract DateTimeNameStyle(String) from String to String
+
 {
 	public var FULL = "full";
 	public var LONG_ABBREVIATION = "longAbbreviation";

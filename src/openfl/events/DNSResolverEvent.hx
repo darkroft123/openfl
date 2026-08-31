@@ -10,8 +10,6 @@ import openfl.net.dns.ResourceRecord;
 	Use the DNSResolver `lookup()` method to initiate a DNS query. Resource
 	records returned by the query are placed in the `resourceRecords` array of
 	this DNSResolverEvent object.
-
-	_OpenFL target support:_ Not currently supported, except when targeting AIR.
 **/
 #if !openfl_debug
 @:fileXml('tags="haxe,release"')
@@ -22,7 +20,7 @@ class DNSResolverEvent extends Event
 	/**
 		Defines the value of the `type` property of a `lookup` event object.
 	**/
-	public static var LOOKUP(default, never):EventType<DNSResolverEvent> = "lookup";
+	public static inline var LOOKUP:EventType<DNSResolverEvent> = "lookup";
 
 	/**
 		The query string, such as a host name, IP address, or service locator

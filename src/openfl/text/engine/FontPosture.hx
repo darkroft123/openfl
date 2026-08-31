@@ -10,6 +10,7 @@ package openfl.text.engine;
 	@see `openfl.text.StageText.fontPosture`
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract FontPosture(Null<Int>)
+
 {
 	/**
 		Used to indicate italic font posture.
@@ -42,7 +43,9 @@ package openfl.text.engine;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract FontPosture(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract FontPosture(String) from String to String
+
 {
 	public var ITALIC = "italic";
 	public var NORMAL = "normal";

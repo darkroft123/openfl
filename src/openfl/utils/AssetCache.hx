@@ -8,46 +8,74 @@ import lime.utils.Assets as LimeAssets;
 #end
 
 /**
-	AssetCache con LRU (Least Recently Used) para Dark's Collection.
-	Sobreescribe el AssetCache estandar de OpenFL.
-
-	Cuando se supera maxMemoryBytes, los assets menos usados se eliminan automaticamente.
-	Esto previene el crecimiento ilimitado de RAM.
+	The AssetCache class is the default cache implementation used
+	by openfl.utils.Assets, objects will be cached for the lifetime
+	of the application unless removed explicitly, or using Assets
+	`unloadLibrary`
 **/
+#if !openfl_debug
+@:fileXml('tags="haxe,release"')
+@:noDebug
+#end
 class AssetCache implements IAssetCache
 {
+	/**
+		Whether caching is currently enabled.
+	**/
 	public var enabled(get, set):Bool;
 
+	/**
+		Internal
+	**/
 	@:noCompletion @:dox(hide) public var bitmapData:Map<String, BitmapData>;
-	@:noCompletion @:dox(hide) public var font:Map<String, Font>;
-	@:noCompletion @:dox(hide) public var sound:Map<String, Sound>;
 
 	/**
-		Maximo de memoria en bytes para el cache de BitmapData.
-		Cuando se supera, se eliminan los assets menos usados (LRU).
-		256MB por defecto. Pon 0 para desactivar el limite.
+		Internal
 	**/
-	public var maxMemoryBytes:Int;
+	@:noCompletion @:dox(hide) public var font:Map<String, Font>;
+
+	/**
+		Internal
+	**/
+	@:noCompletion @:dox(hide) public var sound:Map<String, Sound>;
 
 	@:noCompletion private var __enabled:Bool = true;
 
-	// LRU: orden de acceso, ultimo = mas reciente
-	@:noCompletion private var __lruOrder:Array<String>;
-	// Contador de memoria actual para BitmapData
-	@:noCompletion private var __currentMemoryBytes:Int;
+	#if openfljs
+	@:noCompletion private static function __init__()
+	{
+		untyped global.Object.defineProperty(AssetCache.prototype, "enabled", {
+			get: untyped #if haxe4 js.Syntax.code #else __js__ #end ("function () { return this.get_enabled (); }"),
+			set: untyped #if haxe4 js.Syntax.code #else __js__ #end ("function (v) { return this.set_enabled (v); }")
+		});
+	}
+	#end
 
+	/**
+		Creates a new AssetCache instance.
+	**/
 	public function new()
 	{
 		bitmapData = new Map<String, BitmapData>();
 		font = new Map<String, Font>();
 		sound = new Map<String, Sound>();
-		__lruOrder = [];
-		__currentMemoryBytes = 0;
-		maxMemoryBytes = 256 * 1024 * 1024; // 256MB
 	}
 
 	/**
-		Limpia todos los assets o los que coincidan con un prefijo.
+		Clears all cached assets, or all assets with an ID that
+		matches an optional prefix.
+
+		For example:
+
+		```haxe
+		Assets.setBitmapData("image1", image1);
+		Assets.setBitmapData("assets/image2", image2);
+
+		Assets.clear("assets"); // will clear image2
+		Assets.clear("image"); // will clear image1
+		```
+
+		@param	prefix	A ID prefix
 	**/
 	public function clear(prefix:String = null):Void
 	{
@@ -56,12 +84,11 @@ class AssetCache implements IAssetCache
 			bitmapData = new Map<String, BitmapData>();
 			font = new Map<String, Font>();
 			sound = new Map<String, Sound>();
-			__lruOrder = [];
-			__currentMemoryBytes = 0;
 		}
 		else
 		{
 			var keys = bitmapData.keys();
+
 			for (key in keys)
 			{
 				if (StringTools.startsWith(key, prefix))
@@ -71,6 +98,7 @@ class AssetCache implements IAssetCache
 			}
 
 			var keys = font.keys();
+
 			for (key in keys)
 			{
 				if (StringTools.startsWith(key, prefix))
@@ -80,6 +108,7 @@ class AssetCache implements IAssetCache
 			}
 
 			var keys = sound.keys();
+
 			for (key in keys)
 			{
 				if (StringTools.startsWith(key, prefix))
@@ -91,61 +120,91 @@ class AssetCache implements IAssetCache
 	}
 
 	/**
-		Obtiene un BitmapData del cache y lo marca como "recien usado" (LRU).
+		Retrieves a cached BitmapData.
+
+		@param	id	The ID of the cached BitmapData
+		@return	The cached BitmapData instance
 	**/
 	public function getBitmapData(id:String):BitmapData
 	{
-		var bd = bitmapData.get(id);
-		if (bd != null)
-		{
-			__touchLRU(id);
-		}
-		return bd;
+		return bitmapData.get(id);
 	}
 
+	/**
+		Retrieves a cached Font.
+
+		@param	id	The ID of the cached Font
+		@return	The cached Font instance
+	**/
 	public function getFont(id:String):Font
 	{
 		return font.get(id);
 	}
 
+	/**
+		Retrieves a cached Sound.
+
+		@param	id	The ID of the cached Sound
+		@return	The cached Sound instance
+	**/
 	public function getSound(id:String):Sound
 	{
 		return sound.get(id);
 	}
 
+	/**
+		Checks whether a BitmapData asset is cached.
+
+		@param	id	The ID of a BitmapData asset
+		@return	Whether the object has been cached
+	**/
 	public function hasBitmapData(id:String):Bool
 	{
 		return bitmapData.exists(id);
 	}
 
+	/**
+		Checks whether a Font asset is cached.
+
+		@param	id	The ID of a Font asset
+		@return	Whether the object has been cached
+	**/
 	public function hasFont(id:String):Bool
 	{
 		return font.exists(id);
 	}
 
+	/**
+		Checks whether a Sound asset is cached.
+
+		@param	id	The ID of a Sound asset
+		@return	Whether the object has been cached
+	**/
 	public function hasSound(id:String):Bool
 	{
 		return sound.exists(id);
 	}
 
+	/**
+		Removes a BitmapData from the cache.
+
+		@param	id	The ID of a BitmapData asset
+		@return	`true` if the asset was removed, `false` if it was not in the cache
+	**/
 	public function removeBitmapData(id:String):Bool
 	{
-		if (bitmapData.exists(id))
-		{
-			var bd = bitmapData.get(id);
-			if (bd != null)
-			{
-				__currentMemoryBytes -= __estimateBitmapSize(bd);
-			}
-			__removeFromLRU(id);
-			#if lime
-			LimeAssets.cache.image.remove(id);
-			#end
-			return bitmapData.remove(id);
-		}
-		return false;
+		#if lime
+		LimeAssets.cache.image.remove(id);
+		#end
+		return bitmapData.remove(id);
 	}
 
+	/**
+		Removes a Font from the cache.
+
+		@param	id	The ID of a Font asset
+		@return	`true` if the asset was removed, `false` if it was not in the cache
+	**/
 	public function removeFont(id:String):Bool
 	{
 		#if lime
@@ -154,6 +213,12 @@ class AssetCache implements IAssetCache
 		return font.remove(id);
 	}
 
+	/**
+		Removes a Sound from the cache.
+
+		@param	id	The ID of a Sound asset
+		@return	`true` if the asset was removed, `false` if it was not in the cache
+	**/
 	public function removeSound(id:String):Bool
 	{
 		#if lime
@@ -163,116 +228,36 @@ class AssetCache implements IAssetCache
 	}
 
 	/**
-		Agrega o reemplaza un BitmapData en el cache.
-		Si se supera maxMemoryBytes, elimina los menos usados.
+		Adds or replaces a BitmapData asset in the cache.
+
+		@param	id	The ID of a BitmapData asset
+		@param	bitmapData	The matching BitmapData instance
 	**/
 	public function setBitmapData(id:String, bitmapData:BitmapData):Void
 	{
-		// Si ya existia, restar la memoria vieja
-		if (this.bitmapData.exists(id))
-		{
-			var old = this.bitmapData.get(id);
-			if (old != null)
-			{
-				__currentMemoryBytes -= __estimateBitmapSize(old);
-			}
-			__removeFromLRU(id);
-		}
-
 		this.bitmapData.set(id, bitmapData);
-		__currentMemoryBytes += __estimateBitmapSize(bitmapData);
-		__lruOrder.push(id);
-
-		// Evict si se supera el limite
-		if (maxMemoryBytes > 0)
-		{
-			while (__currentMemoryBytes > maxMemoryBytes && __lruOrder.length > 0)
-			{
-				__evictOldest();
-			}
-		}
 	}
 
+	/**
+		Adds or replaces a Font asset in the cache.
+
+		@param	id	The ID of a Font asset
+		@param	bitmapData	The matching Font instance
+	**/
 	public function setFont(id:String, font:Font):Void
 	{
 		this.font.set(id, font);
 	}
 
+	/**
+		Adds or replaces a Sound asset in the cache.
+
+		@param	id	The ID of a Sound asset
+		@param	bitmapData	The matching Sound instance
+	**/
 	public function setSound(id:String, sound:Sound):Void
 	{
 		this.sound.set(id, sound);
-	}
-
-	/**
-		Estima el tamano en bytes de un BitmapData.
-		Ancho * Alto * 4 bytes (RGBA).
-	**/
-	private function __estimateBitmapSize(bd:BitmapData):Int
-	{
-		if (bd == null) return 0;
-		return bd.width * bd.height * 4;
-	}
-
-	/**
-		Marca un asset como "recien usado" moviendolo al final del LRU.
-	**/
-	private function __touchLRU(id:String):Void
-	{
-		__removeFromLRU(id);
-		__lruOrder.push(id);
-	}
-
-	/**
-		Remueve un ID del array LRU.
-	**/
-	private function __removeFromLRU(id:String):Void
-	{
-		var idx = __lruOrder.indexOf(id);
-		if (idx >= 0)
-		{
-			__lruOrder.splice(idx, 1);
-		}
-	}
-
-	/**
-		Elimina el asset menos usado (el primero del LRU).
-	**/
-	private function __evictOldest():Void
-	{
-		if (__lruOrder.length == 0) return;
-
-		var oldestId = __lruOrder.shift();
-		if (oldestId != null && bitmapData.exists(oldestId))
-		{
-			var bd = bitmapData.get(oldestId);
-			if (bd != null)
-			{
-				__currentMemoryBytes -= __estimateBitmapSize(bd);
-			}
-			#if lime
-			LimeAssets.cache.image.remove(oldestId);
-			#end
-			bitmapData.remove(oldestId);
-		}
-	}
-
-	/**
-		Obtiene cuantos assets hay en el cache de BitmapData.
-	**/
-	public function getBitmapDataCount():Int
-	{
-		var count = 0;
-		for (_ in bitmapData)
-			count++;
-		return count;
-	}
-
-	/**
-		Obtiene la memoria actual usada por BitmapData en bytes.
-	**/
-	public function getCurrentMemoryBytes():Int
-	{
-		return __currentMemoryBytes;
 	}
 
 	// Get & Set Methods

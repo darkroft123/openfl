@@ -9,6 +9,7 @@ package openfl.media;
 	@see `openfl.media.Camera`
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract CameraPosition(Null<Int>)
+
 {
 	/**
 		The `Camera.position` property returns this value for a back camera.
@@ -49,7 +50,9 @@ package openfl.media;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract CameraPosition(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract CameraPosition(String) from String to String
+
 {
 	public var BACK = "back";
 	public var FRONT = "front";

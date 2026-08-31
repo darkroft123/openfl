@@ -5,8 +5,6 @@ package openfl.events;
 	A Geolocation object dispatches GeolocationEvent objects when it receives
 	updates from the location sensor installed on the device.
 
-	_OpenFL target support:_ Not currently supported, except when targeting AIR.
-
 	@see `openfl.sensors.Geolocation`
 **/
 #if !openfl_debug
@@ -18,7 +16,7 @@ class GeolocationEvent extends Event
 	/**
 		Defines the value of the `type` property of a `update` event object.
 	**/
-	public static var UPDATE(default, never):EventType<DeviceRotationEvent> = "update";
+	public static inline var UPDATE:EventType<DeviceRotationEvent> = "update";
 
 	/**
 		The latitude in degrees. The latitude values have the following range:

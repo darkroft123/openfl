@@ -11,6 +11,7 @@ package openfl.display;
 	shows:
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract JointStyle(Null<Int>)
+
 {
 	/**
 		Specifies beveled joints in the `joints` parameter of the
@@ -63,7 +64,9 @@ package openfl.display;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract JointStyle(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract JointStyle(String) from String to String
+
 {
 	public var BEVEL = "bevel";
 	public var MITER = "miter";

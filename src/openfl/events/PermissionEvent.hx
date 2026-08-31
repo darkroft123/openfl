@@ -6,8 +6,6 @@ import openfl.permissions.PermissionStatus;
 /**
 	This event is dispatched when permission status changes for certain
 	operations.
-
-	_OpenFL target support:_ Not currently supported, except when targeting AIR.
 **/
 #if !openfl_debug
 @:fileXml('tags="haxe,release"')
@@ -15,7 +13,7 @@ import openfl.permissions.PermissionStatus;
 #end
 class PermissionEvent extends Event
 {
-	public static var PERMISSION_STATUS(default, never):EventType<PermissionEvent> = "permissionStatus";
+	public static inline var PERMISSION_STATUS:EventType<PermissionEvent> = "permissionStatus";
 
 	/**
 		Check whether the permission has been granted or denied.

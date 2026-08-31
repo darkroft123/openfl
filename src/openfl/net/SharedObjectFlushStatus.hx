@@ -7,6 +7,7 @@ package openfl.net;
 	from a call to the `SharedObject.flush()` method.
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract SharedObjectFlushStatus(Null<Int>)
+
 {
 	/**
 		Indicates that the flush completed successfully.
@@ -40,7 +41,9 @@ package openfl.net;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract SharedObjectFlushStatus(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract SharedObjectFlushStatus(String) from String to String
+
 {
 	public var FLUSHED = "flushed";
 	public var PENDING = "pending";

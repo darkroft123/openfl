@@ -29,16 +29,6 @@ class Context3DTextField
 
 	public static function renderDrawable(textField:TextField, renderer:OpenGLRenderer):Void
 	{
-		// Clear old cache immediately.
-		@:privateAccess
-		if(textField.__cacheBitmap != null && textField.__cacheBitmap.bitmapData != null)
-		{
-			if(textField.__cacheBitmap.bitmapData.__texture != null)
-				textField.__cacheBitmap.bitmapData.__texture.dispose();
-
-			textField.__cacheBitmap.bitmapData.dispose();
-			textField.__cacheBitmap.bitmapData = null;
-		}
 		renderer.__updateCacheBitmap(textField, false);
 
 		if (textField.__cacheBitmap != null && !textField.__isCacheBitmapRender)

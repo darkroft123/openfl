@@ -1,5 +1,6 @@
 package openfl.events;
 
+#if !flash
 // import openfl.utils.ObjectPool;
 import openfl.ui.KeyLocation;
 
@@ -18,6 +19,10 @@ import openfl.ui.KeyLocation;
 	@see [Capturing keyboard input](https://books.openfl.org/openfl-developers-guide/keyboard-input/capturing-keyboard-input.html)
 	@see `openfl.ui.Keyboard`
 **/
+#if !openfl_debug
+@:fileXml('tags="haxe,release"')
+@:noDebug
+#end
 class KeyboardEvent extends Event
 {
 	/**
@@ -237,3 +242,6 @@ class KeyboardEvent extends Event
 		__updateAfterEventFlag = false;
 	}
 }
+#else
+typedef KeyboardEvent = flash.events.KeyboardEvent;
+#end

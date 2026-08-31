@@ -1,6 +1,5 @@
 package openfl.display;
 
-import openfl.utils.AssetLibrary;
 #if !flash
 import openfl.events.EventDispatcher;
 import openfl.events.Event;
@@ -142,8 +141,6 @@ class LoaderInfo extends EventDispatcher
 	**/
 	public var applicationDomain(default, null):ApplicationDomain;
 
-	public var assetLibrary(default, null):AssetLibrary;
-
 	/**
 		The bytes associated with a LoaderInfo object.
 
@@ -241,7 +238,7 @@ class LoaderInfo extends EventDispatcher
 					  requested information.
 		@throws Error If the file is not a SWF file.
 	**/
-	public var frameRate(default, null):Float = -1;
+	public var frameRate(default, null):Float;
 
 	/**
 		The nominal height of the loaded file. This value might differ from the
@@ -251,7 +248,7 @@ class LoaderInfo extends EventDispatcher
 		@throws Error If the file is not downloaded sufficiently to retrieve the
 					  requested information.
 	**/
-	public var height(default, null):Int = -1;
+	public var height(default, null):Int;
 
 	// @:noCompletion @:dox(hide) @:require(flash10_1) public var isURLInaccessible (default, null):Bool;
 
@@ -385,7 +382,7 @@ class LoaderInfo extends EventDispatcher
 		@throws Error If the file is not downloaded sufficiently to retrieve the
 					  requested information.
 	**/
-	public var width(default, null):Int = -1;
+	public var width(default, null):Int;
 
 	@:noCompletion private var __completed:Bool;
 

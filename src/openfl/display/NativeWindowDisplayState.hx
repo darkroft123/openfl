@@ -14,6 +14,7 @@ package openfl.display;
 	@see `openfl.display.StageDisplayState`
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract NativeWindowDisplayState(Null<Int>)
+
 {
 	/**
 		The normal display state.

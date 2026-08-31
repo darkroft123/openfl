@@ -36,15 +36,8 @@ typedef Traits =
 {
 	isExternalizable:Bool,
 	isDynamic:Bool,
-	className:String, // "" for anonymous
+	className:AMF3Value, // "" for anonymous
 	sealedMemberNames:Array<String>
-}
-
-enum AMF3ObjectHeader
-{
-	HReference(value:AMF3Value);
-	HTraits(traits:Traits);
-	HExternal(className:String);
 }
 
 class AMF3Reader
@@ -75,107 +68,118 @@ class AMF3Reader
 		i.bigEndian = true;
 	}
 
-	function readObject(header:AMF3ObjectHeader = null)
+	function readObject()
 	{
-		if (header == null)
+		var dyn = false;
+		var isExternalizable = false;
+		var className = null;
+		var sealedMemberNames = new Array<String>();
+
+		var n = readInt(); // get header
+
+		if (n & 1 == 0)
 		{
-			header = readObjectHeader();
+			// object reference
+			return complexObjectsTable[n >> 1];
+		}
+		else if (n & 3 == 1)
+		{
+			// object traits reference
+			n >>= 2;
+
+			// test?
+			// Does this reference a different traits table, previously sent?
+			// if (n > objectTraitsTable.length - 1)
+			// {
+			// 	objectTraitsTable[n] = {
+			// 		isExternalizable:false,
+			// 		isDynamic:true,
+			// 		className:null,
+			// 		sealedMemberNames:[]
+			// 	};
+			// }
+
+			var refTraits = objectTraitsTable[n];
+			dyn = refTraits.isDynamic;
+			isExternalizable = refTraits.isExternalizable;
+			className = refTraits.className;
+			sealedMemberNames = refTraits.sealedMemberNames;
+		}
+		else if (n & 7 == 3)
+		{
+			// object traits
+			dyn = ((n >> 3) & 0x01) == 1;
+			n >>= 4; // the rest of the header is the count of sealed members
+			className = readString();
+
+			// grab sealed member names from traits section, if any
+			for (j in 0...n)
+				sealedMemberNames.push(AMF3Tools.decode(readString()));
+
+			// save new traits in reference table
+			objectTraitsTable.push({
+				isExternalizable: isExternalizable,
+				isDynamic: dyn,
+				className: className,
+				sealedMemberNames: sealedMemberNames
+			});
+		}
+		else if (n & 7 == 7)
+		{
+			// externalizable
+			isExternalizable = true;
+			className = readString();
+		}
+		else
+		{
+			throw "Invalid object traits";
 		}
 
-		var ret:AMF3Value = null;
+		var ret = null;
 
-		switch (header)
+		if (isExternalizable)
 		{
-			case HReference(value):
-				return value;
+			var o = AMF3Tools.object(AObject(null, null, AMF3Tools.decode(className)));
 
-			case HExternal(className):
-				var o = AMF3Tools.object(AObject(null, null, className));
+			if (o != null && #if (haxe_ver >= 4.2) Std.isOfType #else Std.is #end (o, IExternalizable))
+			{
+				var external:IExternalizable = cast o;
+				external.readExternal(new AMF3ReaderInput(this));
 
-				if (o != null && #if (haxe_ver >= 4.2) Std.isOfType #else Std.is #end (o, IExternalizable))
+				ret = AExternal(external);
+			}
+			else
+			{
+				ret = ANull;
+			}
+		}
+		else
+		{
+			var h = new Map();
+
+			ret = AObject(h, null, className != null ? AMF3Tools.decode(className) : null);
+
+			// parse sealed member values
+			for (j in 0...sealedMemberNames.length)
+				h.set(sealedMemberNames[j], read());
+
+			// parse any dynamic members (name-value pairs) until empty string name is found
+			if (dyn)
+			{
+				var s:Dynamic;
+				while (true)
 				{
-					var external:IExternalizable = cast o;
-					external.readExternal(new AMF3ReaderInput(this));
-
-					ret = AExternal(external);
+					s = AMF3Tools.decode(readString());
+					if (s == "") break;
+					h.set(s, read());
 				}
-				else
-				{
-					ret = ANull;
-				}
-
-			case HTraits(traits):
-				var h = new Map();
-				ret = AObject(h, null, traits.className != null ? traits.className : null);
-
-				// parse sealed member values
-				for (j in 0...traits.sealedMemberNames.length)
-					h.set(traits.sealedMemberNames[j], read());
-
-				// parse any dynamic members (name-value pairs) until empty string name is found
-				if (traits.isDynamic)
-				{
-					var s;
-					while (true)
-					{
-						s = AMF3Tools.decode(readString());
-						if (s == "") break;
-						h.set(s, read());
-					}
-				}
+			}
 		}
 
 		// save new object in reference table
 		complexObjectsTable.push(ret);
 
 		return ret;
-	}
-
-	function readObjectHeader(className:String = null):AMF3ObjectHeader
-	{
-		var n = readInt(); // get header
-
-		if (n & 1 == 0)
-		{
-			// object reference
-			return HReference(complexObjectsTable[n >> 1]);
-		}
-		else if (n & 3 == 1)
-		{
-			// object traits reference
-			n >>= 2;
-			return HTraits(objectTraitsTable[n]);
-		}
-		else if (n & 7 == 3)
-		{
-			// object traits
-			var isDynamic = ((n >> 3) & 0x01) == 1;
-			var sealedMemberNames:Array<String> = [];
-			var count = n >> 4; // the rest of the header is the count of sealed members
-
-			var traits:Traits = {
-				isExternalizable: false,
-				isDynamic: isDynamic,
-				className: className != null ? className : AMF3Tools.decode(readString()),
-				sealedMemberNames: sealedMemberNames
-			};
-
-			// grab sealed member names from traits section, if any
-			for (i in 0...count)
-				sealedMemberNames.push(AMF3Tools.decode(readString()));
-
-			objectTraitsTable.push(traits);
-			return HTraits(traits);
-		}
-		else if (n & 7 == 7)
-		{
-			// externalizable
-			return HExternal(className != null ? className : AMF3Tools.decode(readString()));
-		}
-		else
-		{
-			throw "Invalid object traits";
-		}
 	}
 
 	function readMap()
@@ -284,38 +288,20 @@ class AMF3Reader
 			// reference previous vector object
 			return complexObjectsTable[header >> 1];
 		}
-
 		var len = header >> 1;
 		var fixed = i.readByte() != 0;
-		var className = AMF3Tools.decode(readString());
+		var type = AMF3Tools.decode(readString());
 
 		var v = new Vector<AMF3Value>(len);
 		v.fixed = fixed;
 
-		var ret = AObjectVector(v, className);
+		var ret = AObjectVector(v, type);
 
 		complexObjectsTable.push(ret);
 
-		var header:AMF3ObjectHeader = null;
-
 		for (r in 0...len)
 		{
-			var code = i.readByte();
-			switch (code)
-			{
-				case 0x01:
-					v[r] = null;
-
-				case 0x0a:
-					if (header == null)
-					{
-						header = readObjectHeader(className);
-					}
-					v[r] = readObject(header);
-
-				default:
-					trace("Unhandled object vector code: 0x" + StringTools.hex(code));
-			}
+			v[r] = read();
 		}
 
 		return ret;
@@ -462,7 +448,7 @@ class AMF3Reader
 		return ret;
 	}
 
-	public function readWithCode(id:Int)
+	public function readWithCode(id)
 	{
 		var i = this.i;
 		return switch (id)

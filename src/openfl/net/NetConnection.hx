@@ -31,7 +31,7 @@ import openfl.events.NetStatusEvent;
 	object and define the callback methods on that object.
 
 	@event asyncError    Dispatched when an exception is thrown asynchronously
-						 — that is, from native asynchronous code.
+						 נthat is, from native asynchronous code.
 	@event ioError       Dispatched when an input or output error occurs that
 						 causes a network operation to fail.
 	@event netStatus     Dispatched when a NetConnection object is reporting

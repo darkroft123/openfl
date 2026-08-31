@@ -23,8 +23,6 @@ class CanvasBitmapData
 		var context = renderer.context;
 		context.globalAlpha = 1;
 
-		renderer.__setBlendMode(NORMAL);
-
 		renderer.setTransform(bitmapData.__renderTransform, context);
 
 		context.drawImage(image.src, 0, 0, image.width, image.height);

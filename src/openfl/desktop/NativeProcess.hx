@@ -49,7 +49,8 @@ import sys.thread.Thread;
 **/
 @:access(openfl.utils.ByteArrayData)
 #if !openfl_debug
-@:fileXml('tags="haxe,release"') @:noDebug
+@:fileXml('tags="haxe,release"')
+@:noDebug
 #end
 class NativeProcess extends EventDispatcher
 {

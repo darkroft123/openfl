@@ -1,6 +1,6 @@
 package openfl.filesystem;
 
-#if sys
+#if (!flash && sys && (!flash_doc_gen || air_doc_gen))
 import haxe.io.Path;
 import lime.system.System;
 import openfl.desktop.Icon;
@@ -12,12 +12,10 @@ import openfl.events.IOErrorEvent;
 import openfl.net.FileFilter;
 import openfl.events.FileListEvent;
 import openfl.net.FileReference;
-import openfl.utils.ByteArray;
 import sys.FileSystem;
 import sys.io.Process;
 #if (lime && !macro)
 import lime.ui.FileDialog;
-import lime.ui.FileDialogFilter;
 #end
 import lime.system.BackgroundWorker;
 
@@ -92,7 +90,10 @@ import lime.system.BackgroundWorker;
 	@see [Working with files](https://books.openfl.org/openfl-developers-guide/working-with-the-file-system/working-with-files.html)
 	@see `openfl.filesystem.FileStream`
 **/
-@:access(openfl.events.Event)
+#if !openfl_debug
+@:fileXml('tags="haxe,release"')
+@:noDebug
+#end
 class File extends FileReference
 {
 	/**
@@ -393,7 +394,7 @@ class File extends FileReference
 	// TODO
 	// public static var systemCharset:String;
 	// TODO: platorm specific code?
-	public var url(get, set):String;
+	public var url(get, never):String;
 
 	/**
 		The user's directory.
@@ -423,50 +424,6 @@ class File extends FileReference
 	**/
 	public static var userDirectory(get, never):File;
 
-	/**
-	 * Reads the contents of a file as a `ByteArray`.
-	 *
-	 * @param path The path to the file.
-	 * @return A `ByteArray` containing the file's contents.
-	 */
-	public static inline function getFileBytes(path:String):ByteArray
-	{
-		return HaxeFile.getBytes(path);
-	}
-
-	/**
-	 * Reads the contents of a file as a `String`.
-	 *
-	 * @param path The path to the file.
-	 * @return A `String` containing the file's contents.
-	 */
-	public static inline function getFileText(path:String):String
-	{
-		return HaxeFile.getContent(path);
-	}
-
-	/**
-	 * Saves a `ByteArray` to a file.
-	 *
-	 * @param path The path where the file should be saved.
-	 * @param bytes The `ByteArray` to write to the file.
-	 */
-	public static inline function saveBytes(path:String, bytes:ByteArray):Void
-	{
-		HaxeFile.saveBytes(path, bytes);
-	}
-
-	/**
-	 * Saves a `String` as a text file.
-	 *
-	 * @param path The path where the file should be saved.
-	 * @param text The `String` content to write to the file.
-	 */
-	public static inline function saveText(path:String, text:String):Void
-	{
-		HaxeFile.saveContent(path, text);
-	}
-
 	@:noCompletion private static var __driveLetters:Array<String> =
 		#if windows
 		[
@@ -480,7 +437,9 @@ class File extends FileReference
 		];
 		#end
 
+	@:noCompletion private var __fileDialog:#if (lime && !macro) FileDialog #else Dynamic #end;
 	@:noCompletion private var __fileWorker:BackgroundWorker;
+	@:noCompletion private var __sep:String = #if windows "\\" #else "/" #end;
 	@:noCompletion private var __fileStatsDirty:Bool = false;
 
 	/**
@@ -524,7 +483,7 @@ class File extends FileReference
 
 		if (name.length == 0)
 		{
-			var dirs:Array<String> = Path.directory(__path).split(separator);
+			var dirs:Array<String> = Path.directory(__path).split(__sep);
 			name = dirs[dirs.length - 1];
 		}
 	}
@@ -567,14 +526,14 @@ class File extends FileReference
 			directory.browseForDirectory("Select Directory");
 			directory.addEventListener(Event.SELECT, directorySelected);
 		}
-		catch (error:Dynamic)
+		catch (error:Error)
 		{
-			trace("Failed: " + error);
+			trace("Failed:", error.message);
 		}
 
 		function directorySelected(event:Event):Void
 		{
-			directory = cast(event.target, File);
+			directory = event.target as File;
 			var files:Array = directory.getDirectoryListing();
 			for(i in 0...files.length)
 			{
@@ -585,18 +544,15 @@ class File extends FileReference
 	**/
 	public function browseForDirectory(title:String):Void
 	{
-		#if (lime && !macro)
-		FileDialog.openDirectory(Lib.current.stage.window, title, function(filepaths:Array<String>):Void
+		if (__fileDialog != null)
 		{
-			if (filepaths.length > 0)
-			{
-				__dispatchSelect(filepaths[0]);
-			}
-			else
-			{
-				__dispatchCancel();
-			}
-		}, __path, false);
+			throw new IllegalOperationError("File Dialog is already open.");
+		}
+		#if (lime && !macro)
+		__fileDialog = new FileDialog();
+		__fileDialog.onSelect.add(__dispatchSelect, true);
+		__fileDialog.onCancel.add(__dispatchCancel);
+		__fileDialog.browse(OPEN_DIRECTORY, null, __path, title);
 		#end
 	}
 
@@ -634,9 +590,9 @@ class File extends FileReference
 			fileToOpen.browseForOpen("Open", [txtFilter]);
 			fileToOpen.addEventListener(Event.SELECT, fileSelected);
 		}
-		catch (error:Dynamic)
+		catch (error:Error)
 		{
-			trace("Failed: " + error);
+			trace("Failed:", error.message);
 		}
 
 		function fileSelected(event:Event):Void
@@ -650,18 +606,15 @@ class File extends FileReference
 	**/
 	public function browseForOpen(title:String, typeFilter:Array<FileFilter> = null)
 	{
-		#if (lime && !macro)
-		FileDialog.openFile(Lib.current.stage.window, title, function(filepaths:Array<String>, filter):Void
+		if (__fileDialog != null)
 		{
-			if (filepaths.length > 0)
-			{
-				__dispatchSelect(filepaths[0]);
-			}
-			else
-			{
-				__dispatchCancel();
-			}
-		}, __getFilterTypes(typeFilter), __path, false);
+			throw new IllegalOperationError("File Dialog is already open.");
+		}
+		#if (lime && !macro)
+		__fileDialog = new FileDialog();
+		__fileDialog.onSelect.add(__dispatchSelect, true);
+		__fileDialog.onCancel.add(__dispatchCancel);
+		__fileDialog.browse(OPEN, __getFilterTypes(typeFilter), __path, title);
 		#end
 	}
 
@@ -698,9 +651,9 @@ class File extends FileReference
 			docsDir.browseForOpenMultiple("Select Files");
 			docsDir.addEventListener(FileListEvent.SELECT_MULTIPLE, filesSelected);
 		}
-		catch (error:Dynamic)
+		catch (error:Error)
 		{
-			trace("Failed: " + error);
+			trace("Failed:", error.message);
 		}
 
 		function filesSelected(event:FileListEvent):Void
@@ -714,18 +667,15 @@ class File extends FileReference
 	**/
 	public function browseForOpenMultiple(title:String, typeFilter:Array<FileFilter> = null):Void
 	{
-		#if (lime && !macro)
-		FileDialog.openFile(Lib.current.stage.window, title, function(filepaths:Array<String>, filter):Void
+		if (__fileDialog != null)
 		{
-			if (filepaths.length > 0)
-			{
-				__dispatchSelectMultiple(filepaths);
-			}
-			else
-			{
-				__dispatchCancel();
-			}
-		}, __getFilterTypes(typeFilter), __path, true);
+			throw new IllegalOperationError("File Dialog is already open.");
+		}
+		#if (lime && !macro)
+		__fileDialog = new FileDialog();
+		__fileDialog.onSelectMultiple.add(__dispatchSelectMultiple, true);
+		__fileDialog.onCancel.add(__dispatchCancel);
+		__fileDialog.browse(OPEN_MULTIPLE, __getFilterTypes(typeFilter), __path, title);
 		#end
 	}
 
@@ -760,14 +710,14 @@ class File extends FileReference
 			docsDir.browseForSave("Save As");
 			docsDir.addEventListener(Event.SELECT, saveData);
 		}
-		catch (error:Dynamic)
+		catch (error:Error)
 		{
-			trace("Failed: " + error);
+			trace("Failed:", error.message);
 		}
 
 		function saveData(event:Event):Void
 		{
-			var newFile:File = cast(event.target, File);
+			var newFile:File = event.target as File;
 			var str:String = "Hello.";
 			if (!newFile.exists)
 			{
@@ -781,18 +731,14 @@ class File extends FileReference
 	**/
 	public function browseForSave(title:String):Void
 	{
-		#if (lime && !macro)
-		FileDialog.saveFile(Lib.current.stage.window, title, function(filepath:String, filter):Void
+		if (__fileDialog != null)
 		{
-			if (filepath != null)
-			{
-				__dispatchSelect(filepath);
-			}
-			else
-			{
-				__dispatchCancel();
-			}
-		}, null, __path);
+			throw new IllegalOperationError("File Dialog is already open.");
+		}
+		#if (lime && !macro)
+		__fileDialog = new FileDialog();
+		__fileDialog.onSelect.add(__dispatchSelect, true);
+		__fileDialog.browse(SAVE, null, __path, title);
 		#end
 	}
 
@@ -802,19 +748,7 @@ class File extends FileReference
 	override public function cancel():Void
 	{
 		__fileWorker.cancel();
-
-		#if openfl_pool_events
-		var cancelEvent = Event.__pool.get();
-		cancelEvent.type = Event.CANCEL;
-		#else
-		var cancelEvent = new Event(Event.CANCEL);
-		#end
-
-		dispatchEvent(cancelEvent);
-
-		#if openfl_pool_events
-		Event.__pool.release(cancelEvent);
-		#end
+		dispatchEvent(new Event(Event.CANCEL));
 	}
 
 	/**
@@ -841,54 +775,20 @@ class File extends FileReference
 	**/
 	public function canonicalize():Void
 	{
-		var segs:Array<String> = __path.split(separator);
+		var segs:Array<String> = __path.split(__sep);
 
-		var cPath:String = __driveLetters[__driveLetters.indexOf(segs[0].toUpperCase() + separator)];
+		var cPath:String = __driveLetters[__driveLetters.indexOf(segs[0].toUpperCase() + __sep)];
 		var start:Int = 1;
 		if (cPath == null)
 		{
 			// fall back to unix paths
-			var firstSeg = segs[1];
-			if (firstSeg == "." || firstSeg == "..")
-			{
-				cPath = separator;
-			}
-			else
-			{
-				cPath = separator + firstSeg + separator;
-			}
+			cPath = __sep + segs[1] + __sep;
 			start = 2;
-		}
-
-		var i = segs.length - 1;
-		var dotDotStack = 0;
-		while (i >= start)
-		{
-			var seg = segs[i];
-			if (seg == ".")
-			{
-				segs.splice(i, 1);
-			}
-			else
-			{
-				var isDotDot = seg == "..";
-				if (dotDotStack > 0 && !isDotDot)
-				{
-					segs.splice(i, 1);
-					dotDotStack--;
-				}
-				else if (isDotDot)
-				{
-					segs.splice(i, 1);
-					dotDotStack++;
-				}
-			}
-			i--;
 		}
 
 		for (i in start...segs.length)
 		{
-			cPath += __canonicalize(cPath, segs[i]) + separator;
+			cPath += __canonicalize(cPath, segs[i]) + __sep;
 		}
 
 		__path = Path.removeTrailingSlashes(cPath);
@@ -967,9 +867,9 @@ class File extends FileReference
 		{
 			sourceFile.copyTo(destination, true);
 		}
-		catch (error:Dynamic)
+		catch (error:Error)
 		{
-			trace("Error: " + error);
+			trace("Error:", error.message);
 		}
 		```
 
@@ -1014,7 +914,7 @@ class File extends FileReference
 				for (file in files)
 				{
 					var newFile = new File(Path.join([newPath, file.name]));
-					file.copyTo(newFile, overwrite);
+					file.copyTo(newFile);
 				}
 			}
 			else
@@ -1253,9 +1153,9 @@ class File extends FileReference
 	/**
 		Deletes the file.
 
-		@throws	IOError The file does not exist, or could not be deleted. On Windows, you
-		cannot delete a file that is currently open.
-		@throws SecurityError The application does not have the necessary permissions to delete the file.
+		@throws	IOError The directory does not exist, or the directory could not be deleted. On Windows, you
+		cannot delete a directory that contains a file that is open.
+		@throws SecurityError The application does not have the necessary permissions to delete the directory.
 
 		The following code creates a temporary file and then calls the deleteFile() method to delete it.
 
@@ -1278,10 +1178,10 @@ class File extends FileReference
 	/**
 		Deletes the file asynchronously.
 
-		@event complete Dispatched when the file has been deleted successfully.
-		@event ioError The file does not exist or could not be deleted. On Windows, you cannot delete a
-		a file that is currently open.
-		@throws SecurityError The application does not have the necessary permissions to delete the file.
+		@event complete Dispatched when the directory has been deleted successfully.
+		@event ioError The directory does not exist or could not be deleted. On Windows, you cannot delete a
+		directory that contains a file that is open.
+		@throws SecurityError The application does not have the necessary permissions to delete the directory.
 
 		@see [Working with files](https://books.openfl.org/openfl-developers-guide/working-with-the-file-system/working-with-files.html)
 	**/
@@ -1353,31 +1253,13 @@ class File extends FileReference
 			throw new Error("Not a directory.", 3007);
 		}
 
-		var fileNames:Array<String> = FileSystem.readDirectory(__path);
+		var directories:Array<String> = FileSystem.readDirectory(__path);
 		var files:Array<File> = [];
 
-		#if windows
-		for (fileName in fileNames)
+		for (directory in directories)
 		{
-			files.push(new File(__path + separator + fileName));
+			files.push(new File(__path + __sep + directory));
 		}
-		#else
-		if (__path == separator)
-		{
-			for (fileName in fileNames)
-			{
-				// avoid double // when listing unix root
-				files.push(new File(separator + fileName));
-			}
-		}
-		else
-		{
-			for (fileName in fileNames)
-			{
-				files.push(new File(__path + separator + fileName));
-			}
-		}
-		#end
 
 		return files;
 	}
@@ -1432,10 +1314,10 @@ class File extends FileReference
 		});
 		__fileWorker.doWork.add(function(m:Dynamic)
 		{
-			var fileNames:Array<String> = null;
+			var directories:Array<String> = null;
 			try
 			{
-				fileNames = FileSystem.readDirectory(__path);
+				directories = FileSystem.readDirectory(__path);
 			}
 			catch (e:Dynamic)
 			{
@@ -1451,29 +1333,10 @@ class File extends FileReference
 				return;
 			}
 			var files:Array<File> = [];
-
-			#if windows
-			for (fileName in fileNames)
+			for (directory in directories)
 			{
-				files.push(new File(__path + separator + fileName));
+				files.push(new File(__path + __sep + directory));
 			}
-			#else
-			if (__path == separator)
-			{
-				for (fileName in fileNames)
-				{
-					// avoid double // when listing unix root
-					files.push(new File(separator + fileName));
-				}
-			}
-			else
-			{
-				for (fileName in fileNames)
-				{
-					files.push(new File(__path + separator + fileName));
-				}
-			}
-			#end
 			// don't dispatch events directly from doWork because the listeners
 			// will be called in the wrong thread
 			__fileWorker.sendComplete(new FileListEvent(FileListEvent.DIRECTORY_LISTING, files));
@@ -1593,7 +1456,7 @@ class File extends FileReference
 
 		for (k in 0...relatives.length)
 		{
-			relativePath += relatives[k] + (k != relatives.length - 1 || refPath.length == 1 ? separator : "");
+			relativePath += relatives[k] + (k != relatives.length - 1 || refPath.length == 1 ? __sep : "");
 		}
 
 		return relativePath == "" && ref.__path != __path ? null : relativePath;
@@ -1639,9 +1502,9 @@ class File extends FileReference
 		{
 			sourceFile.moveTo(destination, true);
 		}
-		catch (error:Dynamic)
+		catch (error:Error)
 		{
-			trace("Error: " + error);
+			trace("Error:" + error.message);
 		}
 		```
 
@@ -1793,7 +1656,7 @@ class File extends FileReference
 	public function resolvePath(path:String):File
 	{
 		var directoryPath:String = Path.removeTrailingSlashes(__path);
-		return new File('$directoryPath$separator$path');
+		return new File('$directoryPath$__sep$path');
 	}
 
 	/**
@@ -1846,7 +1709,7 @@ class File extends FileReference
 		trace(temp.nativePath);
 		```
 
-		@returns File A File object referencing the new temporary file;
+		@returns File A File object referencing the new temporary file;		
 
 		@see [Working with files](https://books.openfl.org/openfl-developers-guide/working-with-the-file-system/working-with-files.html)
 	**/
@@ -1877,7 +1740,7 @@ class File extends FileReference
 		}
 		```
 
-		@returns Array An array of File objects, listing the root directories.
+		@returns Array An array of File objects, listing the root directories.		
 	**/
 	public static function getRootDirectories():Array<File>
 	{
@@ -1894,43 +1757,19 @@ class File extends FileReference
 
 	@:noCompletion private function __canonicalize(cpath:String, seg:String):String
 	{
-		var items:Array<String> = null;
-		try
-		{
-			items = FileSystem.readDirectory(Path.directory(cpath));
-		}
-		catch (e:Dynamic) {}
+		seg = seg.toLowerCase();
+		var items:Array<String> = FileSystem.readDirectory(Path.directory(cpath));
 		if (items == null)
 		{
-			// if the directory doesn't exist, or if something goes wrong, like
-			// we don't have permission to read it, use the original name.
-			return seg;
+			return "";
 		}
-
-		// we're using toLowerCase() for comparisons only.
-		// we'll return the original casing if the file doesn't exist.
-		var segLower = seg.toLowerCase();
 		for (item in items)
 		{
-			#if (windows || mac || ios)
-			if (item.toLowerCase() == segLower)
+			if (item.toLowerCase() == seg)
 			{
-				// generally, file systems on Windows and macOS are not
-				// case-sensitive, but file systems on Linux are.
-				// technically, Windows and macOS file systems (or, sometimes,
-				// individual directories) can be configured to be
-				// case-sensitive, but that's rare.
-				// ideally, we should detect case-sensitivity, instead of
-				// assuming, but this is good enough for now.
-				return item;
+				seg = item;
+				break;
 			}
-			#else
-			if (item == seg)
-			{
-				// found an exact match for case-sensitive file systems
-				return item;
-			}
-			#end
 		}
 
 		return seg;
@@ -1938,40 +1777,32 @@ class File extends FileReference
 
 	@:noCompletion private function __dispatchCancel():Void
 	{
-		#if openfl_pool_events
-		var cancelEvent = Event.__pool.get();
-		cancelEvent.type = Event.CANCEL;
-		#else
-		var cancelEvent = new Event(Event.CANCEL);
-		#end
-
-		dispatchEvent(cancelEvent);
-
-		#if openfl_pool_events
-		Event.__pool.release(cancelEvent);
-		#end
+		if (__fileDialog != null)
+		{
+			__fileDialog = null;
+		}
+		this.dispatchEvent(new Event(Event.CANCEL));
 	}
 
 	@:noCompletion private function __dispatchSelect(?filepath:String):Void
 	{
+		if (__fileDialog != null)
+		{
+			__fileDialog = null;
+		}
+
 		nativePath = filepath;
 
-		#if openfl_pool_events
-		var selectEvent = Event.__pool.get();
-		selectEvent.type = Event.SELECT;
-		#else
-		var selectEvent = new Event(Event.SELECT);
-		#end
-
-		dispatchEvent(selectEvent);
-
-		#if openfl_pool_events
-		Event.__pool.release(selectEvent);
-		#end
+		this.dispatchEvent(new Event(Event.SELECT));
 	}
 
 	@:noCompletion private function __dispatchSelectMultiple(?filepaths:Array<String>):Void
 	{
+		if (__fileDialog != null)
+		{
+			__fileDialog = null;
+		}
+
 		var files:Array<File> = [];
 
 		for (filepath in filepaths)
@@ -1986,7 +1817,7 @@ class File extends FileReference
 	{
 		if (hasEventListener(IOErrorEvent.IO_ERROR))
 		{
-			if (Std.isOfType(e, Error))
+			if (#if (haxe_ver >= 4.2) Std.isOfType #else Std.is #end (e, Error))
 			{
 				var error = (e : Error);
 				return new IOErrorEvent(IOErrorEvent.IO_ERROR, false, false, error.message, error.errorID);
@@ -2027,35 +1858,38 @@ class File extends FileReference
 
 		for (dir in dirs)
 		{
-			path += '$dir$separator';
+			path += '$dir$__sep';
 		}
 
 		return Path.removeTrailingSlashes(path);
 	}
 
-	#if (lime && !macro)
-	@:noCompletion private static function __getFilterTypes(typeFilter:Array<FileFilter>):Array<FileDialogFilter>
+	@:noCompletion private function __getFilterTypes(typeFilter:Array<FileFilter>):String
 	{
-		var filters:Array<FileDialogFilter> = [];
+		var filterString:String = null;
+		var filters:Array<String> = [];
 
 		if (typeFilter != null)
 		{
 			for (filter in typeFilter)
 			{
-				var exts:Array<String> = [];
+				var types:Array<String> = filter.extension.split(";");
 
-				for (ext in filter.extension.split(";"))
+				for (type in types)
 				{
-					exts.push(StringTools.replace(ext, "*.", ""));
+					filters.push(StringTools.replace(type, "*.", ""));
 				}
-
-				filters.push(new FileDialogFilter(filter.description, exts.join(";")));
 			}
+
+			filterString = filters.join(",");
 		}
 
-		return filters;
+		#if (lime >= "8.0.1")
+		return filterString;
+		#else
+		return filters[0];
+		#end
 	}
-	#end
 
 	@:noCompletion private static function __getTempPath(dir:Bool):String
 	{
@@ -2093,14 +1927,31 @@ class File extends FileReference
 	#if windows
 	@:noCompletion private function __replaceWindowsEnvVars(path:String):String
 	{
-		// replace all environment variables wrapped in %VAR_NAME%
-		var pattern:EReg = ~/%([^%]+)%/g;
-		return pattern.map(path, function(p)
+		// Define the regular expression to match the path component to be replaced
+		var pattern:EReg = ~/%(.+?)%/;
+
+		// Find the first match of the regular expression in the path
+		var match:Bool = pattern.match(path);
+
+		if (match)
 		{
-			var envVar = p.matched(1);
-			var value = Sys.getEnv(envVar);
-			return (value != null) ? value : p.matched(0);
-		});
+			// Extract the matched path component
+			var matchedPath:String = pattern.matched(0);
+
+			// Get the environment variable name by removing the first and last characters ("%")
+			var envVar:String = matchedPath.substring(1, matchedPath.length - 1);
+
+			// Get the value of the environment variable
+			var envVarValue:Null<String> = Sys.getEnv(envVar);
+
+			if (envVarValue == null)
+			{
+				return path;
+			}
+			// Replace the matched path component with the environment variable value
+			return StringTools.replace(path, matchedPath, envVarValue);
+		}
+		return path;
 	}
 	#end
 
@@ -2183,7 +2034,7 @@ class File extends FileReference
 		return creationDate;
 	}
 
-	@:noCompletion private static inline function get_lineEnding():String
+	@:noCompletion private static function get_lineEnding():String
 	{
 		#if windows
 		return "\r\n";
@@ -2210,7 +2061,7 @@ class File extends FileReference
 		return name;
 	}
 
-	@:noCompletion private inline static function get_separator():String
+	@:noCompletion private static function get_separator():String
 	{
 		#if windows
 		return "\\";
@@ -2268,7 +2119,7 @@ class File extends FileReference
 				path = Path.addTrailingSlash(path);
 			}
 
-			if (#if !windows !StringTools.startsWith(path, "/") && #end Path.directory(path).length == 0)
+			if (Path.directory(path).length == 0)
 			{
 				throw new ArgumentError("One of the parameters is invalid.");
 			}
@@ -2286,64 +2137,9 @@ class File extends FileReference
 
 	@:noCompletion private function get_url():String
 	{
+		// TODO: url encode the native path to avoid invalid URL characters
 		// TODO: use app: and app-storage: protocols instead of file:, when path is relative to those directories
-		var path = nativePath;
-
-		#if windows
-		// convert to forward slashes for URLs
-		path = path.split("\\").join("/");
-		if (!StringTools.startsWith(path, "/"))
-		{
-			path = "/" + path;
-		}
-		#end
-
-		var encoded = StringTools.urlEncode(path);
-		// keep path separators and drive colon unescaped
-		encoded = StringTools.replace(encoded, "%2F", "/");
-		encoded = StringTools.replace(encoded, "%3A", ":");
-		return "file://" + encoded;
-	}
-
-	@:noCompletion private function set_url(value:String):String
-	{
-		if (value == null)
-		{
-			throw new ArgumentError("One of the parameters is invalid.");
-		}
-
-		var resolveFromDirectory:File = null;
-		var schemeRegex = ~/^(.+?):/;
-		if (schemeRegex.match(value))
-		{
-			var scheme = schemeRegex.matched(1);
-			if (scheme == "app")
-			{
-				resolveFromDirectory = File.applicationDirectory;
-			}
-			else if (scheme == "app-storage")
-			{
-				resolveFromDirectory = File.applicationStorageDirectory;
-			}
-			else if (scheme != "file")
-			{
-				throw new ArgumentError("One of the parameters is invalid.");
-			}
-		}
-
-		value = ~/^\/{2,}/.replace(value.substr(5), "/");
-		value = StringTools.urlDecode(value);
-
-		if (resolveFromDirectory != null)
-		{
-			nativePath = resolveFromDirectory.resolvePath(value).nativePath;
-		}
-		else
-		{
-			nativePath = value;
-		}
-
-		return url;
+		return "file:///" + nativePath;
 	}
 
 	@:noCompletion private function get_exists():Bool
@@ -2371,12 +2167,16 @@ class File extends FileReference
 		// TODO:Can we optimize this?
 		var path:String = Path.removeTrailingSlashes(__path);
 
-		var lastIndex:Int = path.lastIndexOf(separator);
-		if (lastIndex == path.indexOf(separator))
+		var lastIndex:Int = path.lastIndexOf(__sep);
+		if (lastIndex == path.indexOf(__sep))
 		{
 			lastIndex += 1;
 		}
-		return lastIndex > 0 ? new File(__path.substring(0, (lastIndex - path.length) + path.length)) : null;
+		return lastIndex != -1 ? new File(__path.substring(0, (lastIndex - path.length) + path.length)) : null;
 	}
 }
+#else
+#if air
+typedef File = flash.filesystem.File;
+#end
 #end

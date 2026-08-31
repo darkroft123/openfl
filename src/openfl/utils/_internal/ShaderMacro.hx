@@ -150,6 +150,7 @@ class ShaderMacro
 				}
 			}
 
+			// #if !display
 			for (field in fields)
 			{
 				switch (field.name)
@@ -191,6 +192,7 @@ class ShaderMacro
 					default:
 				}
 			}
+			// #end
 
 			fields = fields.concat(uniqueFields);
 		}

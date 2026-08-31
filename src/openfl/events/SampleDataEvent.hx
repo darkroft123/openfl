@@ -102,7 +102,7 @@ class SampleDataEvent extends Event
 		| `cancelable` | `false`; there is no default behavior to cancel. |
 		| `position` | The point from which audio data is provided. |
 	**/
-	public static var SAMPLE_DATA(default, never):EventType<SampleDataEvent> = "sampleData";
+	public static inline var SAMPLE_DATA:EventType<SampleDataEvent> = "sampleData";
 
 	// using @:keep on data/position vars because Haxe removes them with
 	// dce full on some targets (at least cpp and hl), but doesn't remove the

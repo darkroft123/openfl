@@ -7,6 +7,7 @@ package openfl.printing;
 	property for the image position of a printed page.
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract PrintJobOrientation(Null<Int>)
+
 {
 	/**
 		The landscape (horizontal) image orientation for printing. This
@@ -43,7 +44,9 @@ package openfl.printing;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract PrintJobOrientation(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract PrintJobOrientation(String) from String to String
+
 {
 	public var LANDSCAPE = "landscape";
 	public var PORTRAIT = "portrait";

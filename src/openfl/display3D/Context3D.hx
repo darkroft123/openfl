@@ -1,5 +1,6 @@
 package openfl.display3D;
 
+#if !flash
 import openfl.display3D._internal.Context3DState;
 import openfl.display3D._internal.GLBuffer;
 import openfl.display3D._internal.GLFramebuffer;
@@ -9,12 +10,10 @@ import openfl.display3D.textures.CubeTexture;
 import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.textures.TextureBase;
 import openfl.display3D.textures.Texture;
-import openfl.display3D.textures.ASTCTexture;
 import openfl.display3D.textures.VideoTexture;
 import openfl.display.BitmapData;
 import openfl.display.Stage;
 import openfl.display.Stage3D;
-import openfl.display.OpenGLRenderer;
 import openfl.errors.Error;
 import openfl.errors.IllegalOperationError;
 import openfl.events.EventDispatcher;
@@ -32,6 +31,7 @@ import lime.graphics.Image;
 import lime.graphics.ImageBuffer;
 import lime.graphics.RenderContext;
 import lime.graphics.WebGLRenderContext;
+import lime.math.Rectangle as LimeRectangle;
 import lime.math.Vector2;
 #end
 
@@ -124,8 +124,11 @@ import lime.math.Vector2;
 	can be used on both desktop and mobile platforms, both when running in Flash Player
 	and AIR.
 **/
+#if !openfl_debug
+@:fileXml('tags="haxe,release"')
+@:noDebug
+#end
 @:access(openfl.display3D._internal.Context3DState)
-@:access(openfl.display3D.textures.ASTCTexture)
 @:access(openfl.display3D.textures.CubeTexture)
 @:access(openfl.display3D.textures.RectangleTexture)
 @:access(openfl.display3D.textures.TextureBase)
@@ -278,8 +281,6 @@ import lime.math.Vector2;
 	@:noCompletion private var __stage3D:Stage3D;
 	@:noCompletion private var __state:Context3DState;
 	@:noCompletion private var __vertexConstants:Float32Array;
-	@:noCompletion private var __usingComplexBlend:Bool;
-	@:noCompletion private var __tempMatrixData:Float32Array;
 
 	@:noCompletion private function new(stage:Stage, contextState:Context3DState = null, stage3D:Stage3D = null)
 	{
@@ -459,12 +460,6 @@ import lime.math.Vector2;
 	public function clear(red:Float = 0, green:Float = 0, blue:Float = 0, alpha:Float = 1, depth:Float = 1, stencil:UInt = 0,
 			mask:UInt = Context3DClearMask.ALL):Void
 	{
-		inline __clear(false, red, green, blue, alpha, depth, stencil, mask);
-	}
-
-	@:noCompletion private function __clear(useScissor:Bool, red:Float = 0, green:Float = 0, blue:Float = 0, alpha:Float = 1, depth:Float = 1,
-			stencil:UInt = 0, mask:UInt = Context3DClearMask.ALL)
-	{
 		__flushGLFramebuffer();
 		__flushGLViewport();
 
@@ -485,12 +480,11 @@ import lime.math.Vector2;
 				|| __contextState.colorMaskBlue != true
 				|| __contextState.colorMaskAlpha != true #end)
 			{
-				gl.colorMask(
-					__contextState.colorMaskRed = true,
-					__contextState.colorMaskGreen = true,
-					__contextState.colorMaskBlue = true,
-					__contextState.colorMaskAlpha = true
-				);
+				gl.colorMask(true, true, true, true);
+				__contextState.colorMaskRed = true;
+				__contextState.colorMaskGreen = true;
+				__contextState.colorMaskBlue = true;
+				__contextState.colorMaskAlpha = true;
 			}
 
 			gl.clearColor(red, green, blue, alpha);
@@ -502,7 +496,8 @@ import lime.math.Vector2;
 
 			if (#if openfl_disable_context_cache true #else __contextState.depthMask != true #end)
 			{
-				gl.depthMask(__contextState.depthMask = true);
+				gl.depthMask(true);
+				__contextState.depthMask = true;
 			}
 
 			gl.clearDepth(depth);
@@ -514,23 +509,17 @@ import lime.math.Vector2;
 
 			if (#if openfl_disable_context_cache true #else __contextState.stencilWriteMask != 0xFF #end)
 			{
-				gl.stencilMask(__contextState.stencilWriteMask = 0xFF);
+				gl.stencilMask(0xFF);
+				__contextState.stencilWriteMask = 0xFF;
 			}
 
 			gl.clearStencil(stencil);
+			__contextState.stencilWriteMask = 0xFF;
 		}
 
 		if (clearMask == 0) return;
 
-		if (useScissor)
-		{
-			__flushGLScissor();
-		}
-		else
-		{
-			__setGLScissorTest(false);
-		}
-
+		__setGLScissorTest(false);
 		gl.clear(clearMask);
 	}
 
@@ -630,38 +619,19 @@ import lime.math.Vector2;
 				var scaledWidth = wantsBestResolution ? width : Std.int(width * __stage.window.scale);
 				var scaledHeight = wantsBestResolution ? height : Std.int(height * __stage.window.scale);
 				#end
-				var vertexData:Array<Float> = [
-					scaledWidth,
-					scaledHeight,
-					0.0,
-					1.0,
-					1.0,
-					0.0,
-					scaledHeight,
-					0.0,
-					0.0,
-					1.0,
-					scaledWidth,
-					0.0,
-					0.0,
-					1.0,
-					0.0,
-					0.0,
-					0.0,
-					0.0,
-					0.0,
-					0.0
-				];
+				var vertexData = new Vector<Float>([
+					scaledWidth, scaledHeight, 0, 1, 1, 0, scaledHeight, 0, 0, 1, scaledWidth, 0, 0, 1, 0, 0, 0, 0, 0, 0.0
+				]);
 
-				__stage3D.__vertexBuffer.uploadFromArray(vertexData, 0, 20);
+				__stage3D.__vertexBuffer.uploadFromVector(vertexData, 0, 20);
 
 				if (__stage3D.__indexBuffer == null)
 				{
 					__stage3D.__indexBuffer = createIndexBuffer(6);
 
-					var indexData:Array<UInt> = [0, 1, 2, 2, 1, 3];
+					var indexData = new Vector<UInt>([0, 1, 2, 2, 1, 3]);
 
-					__stage3D.__indexBuffer.uploadFromArray(indexData, 0, 6);
+					__stage3D.__indexBuffer.uploadFromVector(indexData, 0, 6);
 				}
 			}
 
@@ -943,39 +913,6 @@ import lime.math.Vector2;
 	}
 
 	/**
-		Checks whether ASTC (Adaptive Scalable Texture Compression) is supported on this Context3D instance.
-
-		@return `true` if ASTC textures can be used on this device, `false` otherwise.
-	**/
-	public function isASTCSupported():Bool
-	{
-		if (ASTCTexture.__astcCompressedTexturesSupported == null)
-		{
-			ASTCTexture.__astcCompressedTexturesSupported = gl.getSupportedExtensions().contains("KHR_texture_compression_astc_ldr");
-		}
-
-		return ASTCTexture.__astcCompressedTexturesSupported == true;
-	}
-
-	/**
-		Creates a new ASTCTexture instance from ASTC-compressed data.
-
-		You must check `isASTCSupported()` before calling this method.
-
-		@param data A ByteArray containing ASTC-compressed texture data.
-		@return An `ASTCTexture` ready for use in rendering.
-
-		@throws IllegalOperationError If ASTC is not supported on this device (missing extension).
-		@throws IllegalOperationError If the ASTC signature in `data` is invalid.
-		@throws IllegalOperationError If the ASTC block format (blockX × blockY) is not supported.
-		@throws IllegalOperationError If the ASTC file is too short for header + blocks.
-	**/
-	public function createASTCTexture(data:ByteArray):ASTCTexture
-	{
-		return new ASTCTexture(this, data);
-	}
-
-	/**
 		Creates a VertexBuffer3D object.
 
 		Use a VertexBuffer3D object to upload a set of vertex data to the rendering
@@ -1134,7 +1071,7 @@ import lime.math.Vector2;
 		#if lime
 		if (destination == null) return;
 
-		var sourceRect = srcRect != null ? srcRect.__toLimeRectangle() : new lime.math.Rectangle(0, 0, backBufferWidth, backBufferHeight);
+		var sourceRect = srcRect != null ? srcRect.__toLimeRectangle() : new LimeRectangle(0, 0, backBufferWidth, backBufferHeight);
 		var destVector = destPoint != null ? destPoint.__toLimeVector2() : new Vector2();
 
 		if (__stage.context3D == this)
@@ -1280,22 +1217,7 @@ import lime.math.Vector2;
 		var count = (numTriangles == -1) ? indexBuffer.__numIndices : (numTriangles * 3);
 
 		__bindGLElementArrayBuffer(indexBuffer.__id);
-
-		if (OpenGLRenderer.__coherentBlendsSupported)
-		{
-			gl.enable(0x9285); // BLEND_ADVANCED_COHERENT_KHR
-		}
-		else if (__usingComplexBlend)
-		{
-			gl.blendBarrier();
-		}
-
 		gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, firstIndex * 2);
-
-		if (OpenGLRenderer.__coherentBlendsSupported)
-		{
-			gl.disable(0x9285); // BLEND_ADVANCED_COHERENT_KHR
-		}
 	}
 
 	/**
@@ -1660,63 +1582,6 @@ import lime.math.Vector2;
 		than `numRegisters*4`
 	**/
 	public function setProgramConstantsFromVector(programType:Context3DProgramType, firstRegister:Int, data:Vector<Float>, numRegisters:Int = -1):Void
-	{
-		if (numRegisters == 0) return;
-
-		if (__state.program != null && __state.program.__format == GLSL) {}
-		else
-		{
-			if (numRegisters == -1)
-			{
-				numRegisters = (data.length >> 2);
-			}
-
-			var isVertex = (programType == VERTEX);
-			var dest = isVertex ? __vertexConstants : __fragmentConstants;
-			var source = data;
-
-			var sourceIndex = 0;
-			var destIndex = firstRegister * 4;
-
-			for (i in 0...numRegisters)
-			{
-				dest[destIndex++] = source[sourceIndex++];
-				dest[destIndex++] = source[sourceIndex++];
-				dest[destIndex++] = source[sourceIndex++];
-				dest[destIndex++] = source[sourceIndex++];
-			}
-
-			if (__state.program != null)
-			{
-				__state.program.__markDirty(isVertex, firstRegister, numRegisters);
-			}
-		}
-	}
-
-	/**
-		Sets the constant inputs for the shader programs.
-
-		Sets an array of constants to be accessed by a vertex or fragment shader
-		program. Constants set in Program3D are accessed within the shader programs as
-		constant registers. Each constant register is comprised of 4 floating point
-		values (x, y, z, w). Therefore every register requires 4 entries in the data
-		Vector. The number of registers that you can set for vertex program and
-		fragment program depends on the Context3DProfile.
-
-		@param	programType	The type of shader program, either
-		`Context3DProgramType.VERTEX` or `Context3DProgramType.FRAGMENT`.
-		@param	firstRegister	the index of the first constant register to set.
-		@param	data	the floating point constant values. There must be at least
-		`numRegisters` 4 elements in data.
-		@param	numRegisters	the number of constants to set. Specify -1, the default
-		value, to set enough registers to use all of the available data.
-		@throws	TypeError	Null Pointer Error: when data is `null`.
-		@throws	RangeError	Constant Register Out Of Bounds: when attempting to set more
-		than the maximum number of shader constant registers.
-		@throws	RangeError	Bad Input Size: When the number of elements in data is less
-		than `numRegisters*4`
-	**/
-	public function setProgramConstantsFromArray(programType:Context3DProgramType, firstRegister:Int, data:Array<Float>, numRegisters:Int = -1):Void
 	{
 		if (numRegisters == 0) return;
 
@@ -2162,21 +2027,7 @@ import lime.math.Vector2;
 			__state.program.__flush();
 		}
 
-		if (OpenGLRenderer.__coherentBlendsSupported)
-		{
-			gl.enable(0x9285); // BLEND_ADVANCED_COHERENT_KHR
-		}
-		else if (__usingComplexBlend)
-		{
-			gl.blendBarrier();
-		}
-
 		gl.drawArrays(gl.TRIANGLES, firstIndex, count);
-
-		if (OpenGLRenderer.__coherentBlendsSupported)
-		{
-			gl.disable(0x9285); // BLEND_ADVANCED_COHERENT_KHR
-		}
 	}
 
 	@:noCompletion private function __flushGL():Void
@@ -2507,12 +2358,9 @@ import lime.math.Vector2;
 					__bindGLTextureCubeMap(texture.__getTexture());
 				}
 
-				#if lime
-				if (__context.type == OPENGL)
-				{
-					// TODO: Cache?
-					gl.enable(texture.__textureTarget);
-				}
+				#if (desktop && !html5)
+				// TODO: Cache?
+				gl.enable(gl.TEXTURE_2D);
 				#end
 
 				__contextState.textures[i] = texture;
@@ -2530,10 +2378,32 @@ import lime.math.Vector2;
 			{
 				gl.activeTexture(gl.TEXTURE0 + sampler + 4);
 
-				__bindGLTexture2D(null);
-				if (__state.program.__agalAlphaSamplerEnabled[sampler] != null)
+				if (texture != null && texture.__alphaTexture != null)
 				{
-					gl.uniform1i(__state.program.__agalAlphaSamplerEnabled[sampler].location, 0);
+					if (texture.__alphaTexture.__textureTarget == gl.TEXTURE_2D)
+					{
+						__bindGLTexture2D(texture.__alphaTexture.__getTexture());
+					}
+					else
+					{
+						__bindGLTextureCubeMap(texture.__alphaTexture.__getTexture());
+					}
+
+					texture.__alphaTexture.__setSamplerState(samplerState);
+					gl.uniform1i(__state.program.__agalAlphaSamplerEnabled[sampler].location, 1);
+
+					#if (desktop && !html5)
+					// TODO: Cache?
+					gl.enable(gl.TEXTURE_2D);
+					#end
+				}
+				else
+				{
+					__bindGLTexture2D(null);
+					if (__state.program.__agalAlphaSamplerEnabled[sampler] != null)
+					{
+						gl.uniform1i(__state.program.__agalAlphaSamplerEnabled[sampler].location, 0);
+					}
 				}
 			}
 
@@ -2842,3 +2712,6 @@ import lime.math.Vector2;
 		return 0;
 	}
 }
+#else
+typedef Context3D = flash.display3D.Context3D;
+#end

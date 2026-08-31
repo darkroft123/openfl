@@ -9,6 +9,7 @@ package openfl.desktop;
 	@see `openfl.events.InvokeEvent.reason`
 **/
 #if (haxe_ver >= 4.0) enum #else @:enum #end abstract InvokeEventReason(Null<Int>)
+
 {
 	/**
 		Desktop only; indicates that the InvokeEvent event occurred due to the
@@ -59,7 +60,9 @@ package openfl.desktop;
 	}
 }
 #else
-@SuppressWarnings("checkstyle:FieldDocComment") #if (haxe_ver >= 4.0) enum #else @:enum #end abstract InvokeEventReason(String) from String to String
+@SuppressWarnings("checkstyle:FieldDocComment")
+#if (haxe_ver >= 4.0) enum #else @:enum #end abstract InvokeEventReason(String) from String to String
+
 {
 	public var LOGIN = "login";
 	public var NOTIFICATION = "notification";
