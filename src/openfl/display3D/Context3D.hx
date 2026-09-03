@@ -1,7 +1,6 @@
-﻿package openfl.display3D;
+package openfl.display3D;
 
 #if !flash
-import openfl.display3D.utils.UInt8Buff;
 import openfl.display3D._internal.Context3DState;
 import openfl.display3D._internal.GLBuffer;
 import openfl.display3D._internal.GLFramebuffer;
@@ -1095,9 +1094,10 @@ import lime.math.Vector2;
 
 			__flushGLFramebuffer();
 			__flushGLViewport();
-			//! EDITED BY NE_EO TO REDUCE GARBAGE MEMORY
-			var buffer = UInt8Buff.get(backBufferWidth * backBufferHeight * 4); // new UInt8Array(backBufferWidth * backBufferHeight * 4);
-			var data = buffer.buffer;
+
+			// TODO: Read less pixels if srcRect is smaller
+
+			var data = new UInt8Array(backBufferWidth * backBufferHeight * 4);
 			gl.readPixels(0, 0, backBufferWidth, backBufferHeight, __backBufferTexture.__format, gl.UNSIGNED_BYTE, data);
 
 			var image = new Image(new ImageBuffer(data, backBufferWidth, backBufferHeight, 32, BGRA32));
@@ -1108,8 +1108,6 @@ import lime.math.Vector2;
 				setRenderToTexture(cacheRenderToTexture, __state.renderToTextureDepthStencil, __state.renderToTextureAntiAlias,
 					__state.renderToTextureSurfaceSelector);
 			}
-
-			buffer.put();
 		}
 		#end
 	}
@@ -1142,16 +1140,16 @@ import lime.math.Vector2;
 		`true`, this function returns after the triangles are drawn and throws exceptions
 		for any drawing errors or invalid context state.
 
-		@param	indexBuffer:IndexBuffer3D ÔÇö a set of vertex indices referencing the
+		@param	indexBuffer:IndexBuffer3D — a set of vertex indices referencing the
 		vertices to render.
-		@param	firstIndex:int (default = 0) ÔÇö the index of the first vertex index
+		@param	firstIndex:int (default = 0) — the index of the first vertex index
 		selected to render. Default 0.
-		@param	numTriangles:int (default = -1) ÔÇö the number of triangles to render.
+		@param	numTriangles:int (default = -1) — the number of triangles to render.
 		Each triangle consumes three indices. Pass -1 to draw all triangles in the index
 		buffer. Default -1.
-		@throws	Error ÔÇö Object Disposed: if this Context3D object has been disposed by
+		@throws	Error — Object Disposed: if this Context3D object has been disposed by
 		a calling `dispose()` or because the underlying rendering hardware has been lost.
-		@throws	Error ÔÇö If this method is called too many times between calls to
+		@throws	Error — If this method is called too many times between calls to
 		`present()`. The maximum number of calls is 32,768.
 
 		The following errors are only thrown when `enableErrorChecking` property is true:
@@ -1161,34 +1159,34 @@ import lime.math.Vector2;
 		@throws	Error	No Valid Index Buffer Set: If an IndexBuffer3D object is not set.
 		@throws	Error	Sanity Check On Parameters Failed: when the number of triangles
 		to be drawn or the `firstIndex` exceed allowed values.
-		@throws	RangeError ÔÇö Not Enough Indices In This Buffer: when there aren't enough
+		@throws	RangeError — Not Enough Indices In This Buffer: when there aren't enough
 		indices in the buffer to define the number of triangles to be drawn.
-		@throws	Error ÔÇö Sample Binds Texture Also Bound To Render: when the render target
+		@throws	Error — Sample Binds Texture Also Bound To Render: when the render target
 		is a texture and that texture assigned to a texture input of the current fragment
 		program.
-		@throws	Error ÔÇö Sample Binds Invalid Texture: an invalid texture is specified as
+		@throws	Error — Sample Binds Invalid Texture: an invalid texture is specified as
 		the input to the current fragment program.
-		@throws	Error ÔÇö Sampler Format Does Not Match Texture Format: when the texture
+		@throws	Error — Sampler Format Does Not Match Texture Format: when the texture
 		assigned as the input to the current fragment program has a different format than
 		that specified for the sampler register. For example, a 2D texture is assigned to
 		a cube texture sampler.
-		@throws	Error ÔÇö Sample Binds Undefined Texture: The current fragment program
+		@throws	Error — Sample Binds Undefined Texture: The current fragment program
 		accesses a texture register that has not been set (using `setTextureAt()`).
-		@throws	Error ÔÇö Same Texture Needs Same Sampler Params: If a texture is used for
+		@throws	Error — Same Texture Needs Same Sampler Params: If a texture is used for
 		more than one sampler register, all of the samplers must have the same settings.
 		For example, you cannot set one sampler to clamp and another to wrap.
-		@throws	Error ÔÇö Texture Bound But Not Used: A texture is set as a shader input,
+		@throws	Error — Texture Bound But Not Used: A texture is set as a shader input,
 		but it is not used.
-		@throws	Error ÔÇö Stream Is Not Used: A vertex buffer is assigned to a vertex
+		@throws	Error — Stream Is Not Used: A vertex buffer is assigned to a vertex
 		attribute input, but the vertex program does not reference the corresponding
 		register.
-		@throws	Error ÔÇö Stream Is Invalid: a VertexBuffer3D object assigned to a vertex
+		@throws	Error — Stream Is Invalid: a VertexBuffer3D object assigned to a vertex
 		program input is not a valid object.
-		@throws	RangeError ÔÇö Stream Does Not Have Enough Vertices: A vertex buffer
+		@throws	RangeError — Stream Does Not Have Enough Vertices: A vertex buffer
 		supplying data for drawing the specified triangles does not have enough data.
-		@throws	RangeError ÔÇö Stream Vertex Offset Out Of Bounds: The offset specified in
+		@throws	RangeError — Stream Vertex Offset Out Of Bounds: The offset specified in
 		a `setVertexBufferAt()` call is negative or past the end of the buffer.
-		@throws	Error ÔÇö Stream Read But Not Set: A vertex attribute used by the current
+		@throws	Error — Stream Read But Not Set: A vertex attribute used by the current
 		vertex program is not set (using `setVertexBufferAt()`).
 	**/
 	public function drawTriangles(indexBuffer:IndexBuffer3D, firstIndex:Int = 0, numTriangles:Int = -1):Void
@@ -1293,7 +1291,7 @@ import lime.math.Vector2;
 		Defaults to `Context3DBlendFactor.ONE`.
 		@param	destinationFactor	The factor with which to multiply the destination
 		color. Defaults to `Context3DBlendFactor.ZERO`.
-		@throws	Error ÔÇö Invalid Enum: when `sourceFactor` or `destinationFactor` is
+		@throws	Error — Invalid Enum: when `sourceFactor` or `destinationFactor` is
 		not one of the recognized values, which are defined in the
 		Context3DBlendFactor class.
 	**/
@@ -1857,13 +1855,13 @@ import lime.math.Vector2;
 		As an example, a programmer might define each vertex with the following data:
 
 		```
-		position:  x	float32
-				   y	float32
-				   z	float32
-		color:	 r	unsigned byte
-				   g	unsigned byte
-				   b	unsigned byte
-				   a	unsigned byte
+		position:  x    float32
+				   y    float32
+				   z    float32
+		color:     r    unsigned byte
+				   g    unsigned byte
+				   b    unsigned byte
+				   a    unsigned byte
 		```
 
 		Assuming the vertex was defined in a VertexBuffer3D object named buffer, it
@@ -1871,7 +1869,7 @@ import lime.math.Vector2;
 
 		```haxe
 		setVertexBufferAt(0, buffer, 0, Context3DVertexBufferFormat.FLOAT_3);   // attribute #0 will contain the position information
-		setVertexBufferAt(1, buffer, 3, Context3DVertexBufferFormat.BYTES_4);	// attribute #1 will contain the color information
+		setVertexBufferAt(1, buffer, 3, Context3DVertexBufferFormat.BYTES_4);    // attribute #1 will contain the color information
 		```
 
 		@param	index	the index of the attribute register in the vertex shader (0
@@ -2331,7 +2329,8 @@ import lime.math.Vector2;
 	@:noCompletion private function __flushGLTextures():Void
 	{
 		var sampler = 0;
-		var texture, samplerState;
+		var texture:TextureBase;
+		var samplerState:SamplerState;
 
 		for (i in 0...__state.textures.length)
 		{
