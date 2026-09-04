@@ -250,10 +250,10 @@ class DisplayObjectRenderer extends EventDispatcher
 
 		// TODO: Do not force cacheAsBitmap on OpenGL once Scale-9 is properly supported in Context3DShape
 		if (displayObject.cacheAsBitmap
-			|| (renderer.__type != OPENGL && !colorTransform.__isDefault(true) #if openfl_force_gl_cacheasbitmap_for_scale9grid
-				|| (renderer.__type == OPENGL && displayObject.scale9Grid != null) #end))
+			|| (renderer.__type != OPENGL && !colorTransform.__isDefault(true))
+			|| (renderer.__type == OPENGL && displayObject.scale9Grid != null))
 		{
-			var rect:Rectangle = null;
+			var rect = null;
 
 			var needRender = (displayObject.__cacheBitmap == null
 				|| (displayObject.__renderDirty && (force || (displayObject.__children != null && displayObject.__children.length > 0)))
@@ -370,8 +370,8 @@ class DisplayObjectRenderer extends EventDispatcher
 
 				displayObject.__getFilterBounds(rect, displayObject.__cacheBitmapMatrix);
 
-				filterWidth = rect.width > 0 ? Math.ceil((rect.width + 1) * pixelRatio) : 0;
-				filterHeight = rect.height > 0 ? Math.ceil((rect.height + 1) * pixelRatio) : 0;
+				filterWidth = rect.width > 0 ? Math.floor(rect.width * pixelRatio) : 0;
+				filterHeight = rect.height > 0 ? Math.floor(rect.height * pixelRatio) : 0;
 
 				offsetX = rect.x > 0 ? Math.ceil(rect.x) : Math.floor(rect.x);
 				offsetY = rect.y > 0 ? Math.ceil(rect.y) : Math.floor(rect.y);
@@ -594,8 +594,8 @@ class DisplayObjectRenderer extends EventDispatcher
 						}
 
 						var bitmap = displayObject.__cacheBitmapData;
-						var bitmap2:BitmapData = null;
-						var bitmap3:BitmapData = null;
+						var bitmap2 = null;
+						var bitmap3 = null;
 
 						// if (needSecondBitmapData) {
 						if (displayObject.__cacheBitmapData2 == null
@@ -646,8 +646,7 @@ class DisplayObjectRenderer extends EventDispatcher
 						// var sourceRect = bitmap.rect;
 						// if (__tempPoint == null) __tempPoint = new Point ();
 						// var destPoint = __tempPoint;
-						var shader:Shader;
-						var cacheBitmap:BitmapData;
+						var shader, cacheBitmap;
 
 						for (filter in displayObject.__filters)
 						{
@@ -722,8 +721,8 @@ class DisplayObjectRenderer extends EventDispatcher
 						}
 
 						var bitmap = displayObject.__cacheBitmapData;
-						var bitmap2:BitmapData = null;
-						var bitmap3:BitmapData = null;
+						var bitmap2 = null;
+						var bitmap3 = null;
 
 						if (needSecondBitmapData)
 						{
@@ -763,8 +762,7 @@ class DisplayObjectRenderer extends EventDispatcher
 
 						if (displayObject.__tempPoint == null) displayObject.__tempPoint = new Point();
 						var destPoint = displayObject.__tempPoint;
-						var cacheBitmap:BitmapData;
-						var lastBitmap:BitmapData;
+						var cacheBitmap, lastBitmap;
 
 						for (filter in displayObject.__filters)
 						{

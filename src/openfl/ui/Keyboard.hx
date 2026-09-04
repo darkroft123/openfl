@@ -1,6 +1,5 @@
 package openfl.ui;
 
-#if !flash
 #if lime
 import lime.ui.KeyCode;
 #end
@@ -15,10 +14,6 @@ import lime.ui.KeyCode;
 	@see [Capturing keyboard input](https://books.openfl.org/openfl-developers-guide/keyboard-input/capturing-keyboard-input.html)
 	@see `openfl.events.KeyboardEvent`
 **/
-#if !openfl_debug
-@:fileXml('tags="haxe,release"')
-@:noDebug
-#end
 @:final class Keyboard
 {
 	/**
@@ -814,9 +809,16 @@ import lime.ui.KeyCode;
 	}
 	#end
 
-	@:noCompletion private static function __getCharCode(key:Int, shift:Bool = false):Int
+	@:noCompletion private static function __getCharCode(key:Int, shift:Bool = false, capsLock:Bool = false):Int
 	{
-		if (!shift)
+		var effectiveShift = shift;
+
+		if (key >= Keyboard.A && key <= Keyboard.Z)
+		{
+			effectiveShift = shift != capsLock; // XOR only for letters
+		}
+
+		if (!effectiveShift)
 		{
 			switch (key)
 			{
@@ -962,6 +964,3 @@ import lime.ui.KeyCode;
 	}
 	#end
 }
-#else
-typedef Keyboard = flash.ui.Keyboard;
-#end
