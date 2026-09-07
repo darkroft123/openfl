@@ -3027,7 +3027,7 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 		var delta = if (deltaY > 0) Math.ceil(deltaY) else if (deltaY < 0) Math.floor(deltaY) else 0;
 		if (delta == 0 && deltaY != 0) delta = deltaY > 0 ? 1 : -1;
 
-		var event = MouseEvent.__create(MouseEvent.MOUSE_WHEEL, 0, 0, __mouseX, __mouseY, target.__globalToLocal(targetPoint, targetPoint), target, delta);
+		var event = MouseEvent.__create(MouseEvent.MOUSE_WHEEL, 0, 0, __mouseX, __mouseY, target.__globalToLocal(targetPoint, targetPoint), target, deltaX, delta != 0 ? delta : deltaY);
 		event.cancelable = true;
 		__dispatchStack(event, stack);
 		if (event.isDefaultPrevented()) window.onMouseWheel.cancel();

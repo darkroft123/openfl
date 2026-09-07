@@ -766,6 +766,7 @@ class MouseEvent extends Event
 	// Get & Set Methods
 	@:noCompletion private function get_delta():Int
 	{
-		return Std.int(deltaY);
+		if (deltaY != 0) return Std.int(deltaY);
+		return Std.int(deltaX);
 	}
 }
