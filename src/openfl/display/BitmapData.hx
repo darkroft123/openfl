@@ -745,6 +745,21 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public function dispose():Void
 	{
+		if (__texture != null) {
+			try {
+				var stage = Lib.current.stage;
+				if (stage != null) {
+					var renderer:Dynamic = @:privateAccess stage.__renderer;
+					if (renderer != null) {
+						var gl:Dynamic = @:privateAccess renderer.__gl;
+						if (gl != null) {
+							gl.deleteTexture(__texture);
+						}
+					}
+				}
+			} catch (e:Dynamic) {}
+		}
+
 		image = null;
 
 		width = 0;
@@ -761,26 +776,6 @@ class BitmapData implements IBitmapDrawable
 		__framebufferContext = null;
 		__texture = null;
 		__textureContext = null;
-
-		// if (__texture != null) {
-		//
-		// var renderer = @:privateAccess Lib.current.stage.__renderer;
-		//
-		// if(renderer != null) {
-		//
-		// var renderer = @:privateAccess renderer.renderer;
-		// var gl = renderer.__gl;
-		//
-		// if (gl != null) {
-		//
-		// gl.deleteTexture (__texture);
-		// __texture = null;
-		//
-		// }
-		//
-		// }
-		//
-		// }
 	}
 
 	/**

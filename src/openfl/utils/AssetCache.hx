@@ -248,6 +248,7 @@ class AssetCache implements IAssetCache
 			if (bd != null)
 			{
 				__currentMemoryBytes -= __estimateBitmapSize(bd);
+				bd.dispose();
 			}
 			#if lime
 			LimeAssets.cache.image.remove(oldestId);
