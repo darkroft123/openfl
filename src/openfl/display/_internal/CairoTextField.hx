@@ -117,7 +117,6 @@ class CairoTextField
 
 			if (!renderable || needsUpscaling)
 			{
-				if (graphics.__bitmap != null) graphics.__bitmap.dispose();
 				graphics.__cairo = null;
 				graphics.__bitmap = null;
 				graphics.__visible = false;
