@@ -606,7 +606,11 @@ class DisplayObjectRenderer extends EventDispatcher
 						}
 						else
 						{
-							displayObject.__cacheBitmapData2.__fillRect(displayObject.__cacheBitmapData2.rect, 0, (renderer.__type == OPENGL));
+							displayObject.__cacheBitmapData2.fillRect(displayObject.__cacheBitmapData2.rect, 0);
+							if (displayObject.__cacheBitmapData2.image != null)
+							{
+								displayObject.__cacheBitmapData2.__textureVersion = displayObject.__cacheBitmapData2.image.version + 1;
+							}
 						}
 						displayObject.__cacheBitmapData2.__setUVRect(context, 0, 0, filterWidth, filterHeight);
 						bitmap2 = displayObject.__cacheBitmapData2;
@@ -624,7 +628,11 @@ class DisplayObjectRenderer extends EventDispatcher
 							}
 							else
 							{
-								displayObject.__cacheBitmapData3.__fillRect(displayObject.__cacheBitmapData3.rect, 0, (renderer.__type == OPENGL));
+								displayObject.__cacheBitmapData3.fillRect(displayObject.__cacheBitmapData3.rect, 0);
+								if (displayObject.__cacheBitmapData3.image != null)
+								{
+									displayObject.__cacheBitmapData3.__textureVersion = displayObject.__cacheBitmapData3.image.version + 1;
+								}
 							}
 							displayObject.__cacheBitmapData3.__setUVRect(context, 0, 0, filterWidth, filterHeight);
 							bitmap3 = displayObject.__cacheBitmapData3;
@@ -663,14 +671,7 @@ class DisplayObjectRenderer extends EventDispatcher
 							filter.__renderDirty = false;
 						}
 
-						if (displayObject.__cacheBitmapData != bitmap)
-						{
-							cacheBitmap = displayObject.__cacheBitmapData;
-							displayObject.__cacheBitmapData = bitmap;
-							displayObject.__cacheBitmapData2 = cacheBitmap;
-						}
-
-						displayObject.__cacheBitmap.__bitmapData = displayObject.__cacheBitmapData;
+						displayObject.__cacheBitmap.__bitmapData = bitmap;
 					}
 
 					parentRenderer.__blendMode = NORMAL;
